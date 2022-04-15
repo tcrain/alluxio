@@ -12,6 +12,7 @@
 package alluxio.master.file;
 
 import alluxio.AlluxioURI;
+import alluxio.Constants;
 import alluxio.client.WriteType;
 import alluxio.collections.Pair;
 import alluxio.conf.PropertyKey;
@@ -599,29 +600,28 @@ public class InodeSyncStream {
       AlluxioURI ufsUri = resolution.getUri();
       try (CloseableResource<UnderFileSystem> ufsResource = resolution.acquireUfsResource()) {
         UnderFileSystem ufs = ufsResource.get();
+        String ufsFingerprint;
         Fingerprint ufsFpParsed;
         // When the status is not cached and it was not due to file not found, we retry
         if (fileNotFound) {
-          ufsFpParsed = Fingerprint.INVALID_FINGERPRINT;
+          ufsFingerprint = Constants.INVALID_UFS_FINGERPRINT;
+          ufsFpParsed = Fingerprint.parse(ufsFingerprint);
         } else if (cachedStatus == null) {
-          ufsFpParsed =
-              (Fingerprint) getFromUfs(() -> ufs.getParsedFingerprint(ufsUri.toString()));
+          // TODO(david): change the interface so that getFingerprint returns a parsed fingerprint
+          ufsFingerprint = (String) getFromUfs(() -> ufs.getFingerprint(ufsUri.toString()));
+          ufsFpParsed = Fingerprint.parse(ufsFingerprint);
         } else {
           // When the status is cached
-          if (!mFsMaster.isAclEnabled()) {
+          Pair<AccessControlList, DefaultAccessControlList> aclPair =
+              (Pair<AccessControlList, DefaultAccessControlList>)
+                  getFromUfs(() -> ufs.getAclPair(ufsUri.toString()));
+          if (aclPair == null || aclPair.getFirst() == null || !aclPair.getFirst().hasExtended()) {
             ufsFpParsed = Fingerprint.create(ufs.getUnderFSType(), cachedStatus);
           } else {
-            Pair<AccessControlList, DefaultAccessControlList> aclPair =
-                (Pair<AccessControlList, DefaultAccessControlList>)
-                    getFromUfs(() -> ufs.getAclPair(ufsUri.toString()));
-            if (aclPair == null || aclPair.getFirst() == null
-                || !aclPair.getFirst().hasExtended()) {
-              ufsFpParsed = Fingerprint.create(ufs.getUnderFSType(), cachedStatus);
-            } else {
-              ufsFpParsed = Fingerprint.create(ufs.getUnderFSType(), cachedStatus,
-                  aclPair.getFirst());
-            }
+            ufsFpParsed = Fingerprint.create(ufs.getUnderFSType(), cachedStatus,
+                aclPair.getFirst());
           }
+          ufsFingerprint = ufsFpParsed.serialize();
         }
         boolean containsMountPoint = mMountTable.containsMountPoint(inodePath.getUri(), true);
 
@@ -650,7 +650,7 @@ public class InodeSyncStream {
               builder.setGroup(group);
             }
             SetAttributeContext ctx = SetAttributeContext.mergeFrom(builder)
-                .setUfsFingerprint(ufsFpParsed.serialize());
+                .setUfsFingerprint(ufsFingerprint);
             mFsMaster.setAttributeSingleFile(mRpcContext, inodePath, false, opTimeMs, ctx);
           }
         }

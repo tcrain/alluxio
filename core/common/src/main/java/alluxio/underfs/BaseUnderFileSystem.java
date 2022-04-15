@@ -48,8 +48,6 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public abstract class BaseUnderFileSystem implements UnderFileSystem {
   private static final Logger LOG = LoggerFactory.getLogger(BaseUnderFileSystem.class);
-  public static final Pair<AccessControlList, DefaultAccessControlList> EMPTY_ACL =
-      new Pair<>(null, null);
 
   /** The UFS {@link AlluxioURI} used to create this {@link BaseUnderFileSystem}. */
   protected final AlluxioURI mUri;
@@ -86,7 +84,7 @@ public abstract class BaseUnderFileSystem implements UnderFileSystem {
   @Override
   public Pair<AccessControlList, DefaultAccessControlList> getAclPair(String path)
       throws IOException {
-    return EMPTY_ACL;
+    return new Pair<>(null, null);
   }
 
   @Override
@@ -115,22 +113,6 @@ public abstract class BaseUnderFileSystem implements UnderFileSystem {
       // In certain scenarios, it is expected that the UFS path does not exist.
       LOG.debug("Failed fingerprint. path: {} error: {}", path, e.toString());
       return Constants.INVALID_UFS_FINGERPRINT;
-    }
-  }
-
-  @Override
-  public Fingerprint getParsedFingerprint(String path) {
-    try {
-      UfsStatus status = getStatus(path);
-      Pair<AccessControlList, DefaultAccessControlList> aclPair = getAclPair(path);
-
-      if (aclPair == null || aclPair.getFirst() == null || !aclPair.getFirst().hasExtended()) {
-        return Fingerprint.create(getUnderFSType(), status);
-      } else {
-        return Fingerprint.create(getUnderFSType(), status, aclPair.getFirst());
-      }
-    } catch (IOException e) {
-      return Fingerprint.INVALID_FINGERPRINT;
     }
   }
 

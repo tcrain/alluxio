@@ -12,7 +12,6 @@
 package alluxio.testutils.underfs.sleeping;
 
 import alluxio.AlluxioURI;
-import alluxio.underfs.Fingerprint;
 import alluxio.underfs.UfsDirectoryStatus;
 import alluxio.underfs.UfsFileStatus;
 import alluxio.underfs.UfsStatus;
@@ -147,12 +146,6 @@ public class SleepingUnderFileSystem extends LocalUnderFileSystem {
   public String getFingerprint(String path) {
     sleepIfNecessary(mOptions.getGetFingerprintMs());
     return super.getFingerprint(cleanPath(path));
-  }
-
-  @Override
-  public Fingerprint getParsedFingerprint(String path) {
-    sleepIfNecessary(mOptions.getGetFingerprintMs());
-    return super.getParsedFingerprint(cleanPath(path));
   }
 
   @Override

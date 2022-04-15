@@ -38,8 +38,6 @@ public final class Fingerprint {
   /** These tags are all the content tags in the fingerprints. */
   private static final Tag[] CONTENT_TAGS = {Tag.TYPE, Tag.UFS, Tag.CONTENT_HASH};
 
-  public static final Fingerprint INVALID_FINGERPRINT = new Fingerprint(Collections.emptyMap());
-
   private static final char KVDELIMTER = '|';
   private static final char TAGDELIMTER = ' ';
 
@@ -137,7 +135,7 @@ public final class Fingerprint {
       return null;
     }
     if (Constants.INVALID_UFS_FINGERPRINT.equals(input)) {
-      return INVALID_FINGERPRINT;
+      return new Fingerprint(Collections.emptyMap());
     }
     Map<String, String> kv = Splitter.on(TAGDELIMTER).trimResults().omitEmptyStrings()
             .withKeyValueSeparator(KVDELIMTER).split(input);
