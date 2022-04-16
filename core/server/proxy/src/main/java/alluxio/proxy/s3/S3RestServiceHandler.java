@@ -24,6 +24,7 @@ import alluxio.exception.AlluxioException;
 import alluxio.exception.DirectoryNotEmptyException;
 import alluxio.exception.FileAlreadyExistsException;
 import alluxio.exception.FileDoesNotExistException;
+import alluxio.exception.InvalidPathException;
 import alluxio.grpc.CreateDirectoryPOptions;
 import alluxio.grpc.CreateFilePOptions;
 import alluxio.grpc.DeletePOptions;
@@ -213,28 +214,23 @@ public final class S3RestServiceHandler {
                             @QueryParam("prefix") final String prefixParam,
                             @QueryParam("delimiter") final String delimiterParam,
                             @QueryParam("encoding-type") final String encodingTypeParam,
-                            @QueryParam("max-keys") final int maxKeysParam,
-                            @QueryParam("list-type") final int listTypeParam,
+                            @QueryParam("max-keys") final Integer maxKeysParam,
+                            @QueryParam("list-type") final Integer listTypeParam,
                             @QueryParam("continuation-token") final String continuationTokenParam,
                             @QueryParam("start-after") final String startAfterParam,
                             @QueryParam("tagging") final String tagging) {
     return S3RestUtils.call(bucket, () -> {
       Preconditions.checkNotNull(bucket, "required 'bucket' parameter is missing");
-      String marker = markerParam == null ? "" : markerParam;
-      String prefix = prefixParam == null ? "" : prefixParam;
-      String encodingType = encodingTypeParam == null ? "url" : encodingTypeParam;
-      int maxKeys = maxKeysParam <= 0 ? ListBucketOptions.DEFAULT_MAX_KEYS : maxKeysParam;
-      String continuationToken = continuationTokenParam == null ? "" : continuationTokenParam;
-      String startAfter = startAfterParam == null ? "" : startAfterParam;
+      int maxKeys = maxKeysParam == null ? ListBucketOptions.DEFAULT_MAX_KEYS : maxKeysParam;
       ListBucketOptions listBucketOptions = ListBucketOptions.defaults()
-          .setMarker(marker)
-          .setPrefix(prefix)
+          .setMarker(markerParam)
+          .setPrefix(prefixParam)
           .setMaxKeys(maxKeys)
           .setDelimiter(delimiterParam)
-          .setEncodingType(encodingType)
+          .setEncodingType(encodingTypeParam)
           .setListType(listTypeParam)
-          .setContinuationToken(continuationToken)
-          .setStartAfter(startAfter);
+          .setContinuationToken(continuationTokenParam)
+          .setStartAfter(startAfterParam);
 
       String path = S3RestUtils.parsePath(String.format("%s%s", AlluxioURI.SEPARATOR, bucket));
       final FileSystem fs = getFileSystem(authorization);
@@ -255,7 +251,11 @@ public final class S3RestServiceHandler {
       try {
         // only list the direct children if delimiter is not null
         if (delimiterParam != null) {
-          path = parsePath(path, prefix, delimiterParam);
+          if (prefixParam == null) {
+            path = parsePath(path, "", delimiterParam);
+          } else {
+            path = parsePath(path, prefixParam, delimiterParam);
+          }
           children = fs.listStatus(new AlluxioURI(path));
         } else {
           ListStatusPOptions options = ListStatusPOptions.newBuilder().setRecursive(true).build();
@@ -384,6 +384,20 @@ public final class S3RestServiceHandler {
           throw S3RestUtils.toBucketS3Exception(e, bucketPath);
         }
         return Response.Status.OK;
+      }
+
+      // Silently swallow CreateBucket calls on existing buckets
+      // - S3 clients may prepend PutObject requests with CreateBucket calls instead of
+      //   calling HeadBucket to ensure that the bucket exists
+      try {
+        URIStatus status = fs.getStatus(new AlluxioURI(bucketPath));
+        if (status.isFolder()) { return Response.Status.OK; }
+        throw new InvalidPathException(
+            String.format("Bucket %s is not a valid Alluxio directory.", bucketPath));
+      } catch (FileDoesNotExistException e) {
+        // do nothing, we will create the directory below
+      } catch (Exception e) {
+        throw S3RestUtils.toBucketS3Exception(e, bucketPath);
       }
 
       // Create the bucket.
