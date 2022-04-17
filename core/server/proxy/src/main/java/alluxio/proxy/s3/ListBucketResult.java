@@ -196,6 +196,15 @@ public class ListBucketResult {
     //sort use uri path
     children.sort(Comparator.comparing(URIStatus::getPath));
     mContents = children.stream()
+        //marker filter
+        .filter(status -> {
+          String path = status.getPath().substring(bucketPrefix.length());
+          return (path.startsWith(mPrefix) //prefix filter
+              && path.compareTo(marker) > 0 //marker filter
+              //startAfter filter for listObjectV2
+              && (!isVersion2() || mStartAfter == null
+                || path.compareTo(mStartAfter) > 0));
+        })
         .map(status -> {
           String path = status.getPath().substring(bucketPrefix.length());
           return new Content(
@@ -203,15 +212,6 @@ public class ListBucketResult {
               S3RestUtils.toS3Date(status.getLastModificationTimeMs()),
               status.isFolder() ? "0" : String.valueOf(status.getLength())
           );
-        })
-        //marker filter
-        .filter(content -> {
-          String path = content.getKey();
-          return (path.startsWith(mPrefix) //prefix filter
-              && path.compareTo(marker) > 0 //marker filter
-              //startAfter filter for listObjectV2
-              && (!isVersion2() || mStartAfter == null
-                || path.compareTo(mStartAfter) > 0));
         })
         .filter(content -> {
           String path = content.getKey();
@@ -248,7 +248,7 @@ public class ListBucketResult {
           }
           return false; // the key is dropped because it is consumed by the common prefix
         })
-        .limit(mMaxKeys + 1)
+        .limit(mMaxKeys + 1) // limit to +1 in order to check if we have exactly MaxKeys or not
         .filter(content -> {
           // Filter out the common prefixes from the keys
           String path = content.getKey();
