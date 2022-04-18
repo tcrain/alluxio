@@ -32,7 +32,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import javax.xml.bind.annotation.XmlTransient;
 
@@ -191,7 +190,7 @@ public class ListBucketResult {
     //group by common prefix if delimiter is provided
     Set<String> commonPrefixes = new HashSet<>();
     // used when handling truncating
-    AtomicReference<String> priorNextMarker = new AtomicReference<>();
+    int[] keyCount = {0};
 
     //sort use uri path
     children.sort(Comparator.comparing(URIStatus::getPath));
@@ -216,14 +215,24 @@ public class ListBucketResult {
         .filter(content -> {
           String path = content.getKey();
           if (mDelimiter == null) {
-            priorNextMarker.set(mNextMarker);
-            mNextMarker = path;
+            if (keyCount[0] < mMaxKeys) {
+              mNextMarker = path;
+            } else {
+              content.mShouldFilter = true;
+              mIsTruncated = true;
+            }
+            keyCount[0]++;
             return true;
           }
           int delimiterIndex = path.substring(mPrefix.length()).indexOf(mDelimiter);
           if (delimiterIndex == -1) { // no matching delimiter
-            priorNextMarker.set(mNextMarker);
-            mNextMarker = path;
+            if (keyCount[0] < mMaxKeys) {
+              mNextMarker = path;
+            } else {
+              content.mShouldFilter = true;
+              mIsTruncated = true;
+            }
+            keyCount[0]++;
             return true;
           }
           /*
@@ -240,49 +249,30 @@ public class ListBucketResult {
           if (commonPrefix.equals(marker)) {
             return false; // skip if the marker was this common prefix
           }
-          if (commonPrefixes.add(commonPrefix)) {
-            mCommonPrefixes.add(new CommonPrefix(commonPrefix));
-            priorNextMarker.set(mNextMarker);
-            mNextMarker = commonPrefix;
-            return true; // we will add the common prefix to the key stream for processing purposes
+          if (keyCount[0] == mMaxKeys) {
+            if (commonPrefixes.contains(commonPrefix)) {
+              return false;
+            }
+            mIsTruncated = true;
+            content.mShouldFilter = true;
+            return true;
+          } else {
+            if (commonPrefixes.add(commonPrefix)) {
+              mCommonPrefixes.add(new CommonPrefix(commonPrefix));
+              keyCount[0]++;
+              mNextMarker = commonPrefix;
+              content.mShouldFilter = true;
+              return true; // we will add the common prefix to the key stream for processing purposes
+            }
           }
           return false; // the key is dropped because it is consumed by the common prefix
         })
         .limit(mMaxKeys + 1) // limit to +1 in order to check if we have exactly MaxKeys or not
-        .filter(content -> {
-          // Filter out the common prefixes from the keys
-          String path = content.getKey();
-          if (mDelimiter == null) {
-            return true;
-          }
-          int delimiterIndex = path.substring(mPrefix.length()).indexOf(mDelimiter);
-          if (delimiterIndex == -1) { // no matching delimiter
-            return true; // include keys which are not common prefixes
-          }
-          String commonPrefix = path.substring(0, mPrefix.length() + delimiterIndex
-              + mDelimiter.length());
-          return !commonPrefixes.contains(commonPrefix); // filter out common prefixes
-        })
+        .filter(content -> !content.mShouldFilter)
         .collect(Collectors.toList());
 
     // Check and populate truncation fields
-    if (mContents.size() + (mCommonPrefixes == null ? 0 : mCommonPrefixes.size()) == mMaxKeys + 1) {
-      mIsTruncated = true;
-      // Handle edge-case for truncating vs having <= MaxKeys
-      if (mContents.get(mContents.size() - 1).getKey().equals(mNextMarker)) {
-        mContents.remove(mContents.size() - 1);
-      } else if (mCommonPrefixes != null
-          && mCommonPrefixes.get(mCommonPrefixes.size() - 1).getPrefix().equals(mNextMarker)) {
-        mCommonPrefixes.remove(mCommonPrefixes.size() - 1);
-      } else {
-        throw new S3Exception(new S3ErrorCode(
-            S3ErrorCode.INTERNAL_ERROR.getCode(),
-            "Failed to populate ListBucketResult",
-            S3ErrorCode.INTERNAL_ERROR.getStatus()
-        ));
-      }
-
-      mNextMarker = priorNextMarker.get(); // nullable
+    if (mIsTruncated) {
       if (isVersion2() && mNextMarker != null) {
         mNextContinuationToken = encodeToken(mNextMarker);
         mNextMarker = null;
@@ -518,6 +508,7 @@ public class ListBucketResult {
     private final String mLastModified;
     /* Size in bytes of the object. */
     private final String mSize;
+    boolean mShouldFilter = false;
 
     /**
      * Constructs a new {@link Content}.
