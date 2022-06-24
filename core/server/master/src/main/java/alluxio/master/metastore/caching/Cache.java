@@ -115,18 +115,9 @@ public abstract class Cache<K, V> implements Closeable {
     if (option.shouldSkipCache() || cacheIsFull()) {
       return getSkipCache(key);
     }
-    Entry result = mMap.get(key);
-    if (result != null) {
-      mStatsCounter.recordHit();
-      result.mReferenced = true;
-      return Optional.ofNullable(result.mValue);
-    }
-    result = mMap.compute(key, (k, entry) -> {
-      if (entry != null) {
-        mStatsCounter.recordHit();
-        entry.mReferenced = true;
-        return entry;
-      }
+    boolean[] miss = {false};
+    Entry result = mMap.computeIfAbsent(key, k -> {
+      miss[0] = true;
       mStatsCounter.recordMiss();
       final Stopwatch stopwatch = Stopwatch.createStarted();
       Optional<V> value = load(key);
@@ -139,6 +130,11 @@ public abstract class Cache<K, V> implements Closeable {
       }
       return null;
     });
+    if (!miss[0]) {
+      mStatsCounter.recordHit();
+      result.mReferenced = true;
+      return Optional.ofNullable(result.mValue);
+    }
     if (result == null || result.mValue == null) {
       return Optional.empty();
     }
