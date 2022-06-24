@@ -115,7 +115,13 @@ public abstract class Cache<K, V> implements Closeable {
     if (option.shouldSkipCache() || cacheIsFull()) {
       return getSkipCache(key);
     }
-    Entry result = mMap.compute(key, (k, entry) -> {
+    Entry result = mMap.get(key);
+    if (result != null) {
+      mStatsCounter.recordHit();
+      result.mReferenced = true;
+      return Optional.ofNullable(result.mValue);
+    }
+    result = mMap.compute(key, (k, entry) -> {
       if (entry != null) {
         mStatsCounter.recordHit();
         entry.mReferenced = true;
