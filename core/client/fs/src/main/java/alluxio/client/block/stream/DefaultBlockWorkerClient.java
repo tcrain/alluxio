@@ -90,7 +90,10 @@ public class DefaultBlockWorkerClient implements BlockWorkerClient {
    */
   public DefaultBlockWorkerClient(UserState userState, GrpcServerAddress address,
       AlluxioConfiguration alluxioConf) throws IOException {
-    RetryPolicy retryPolicy = RetryUtils.defaultClientRetry();
+    RetryPolicy retryPolicy = RetryUtils.defaultClientRetry(
+        alluxioConf.getDuration(PropertyKey.USER_RPC_RETRY_MAX_DURATION),
+        alluxioConf.getDuration(PropertyKey.USER_RPC_RETRY_BASE_SLEEP_MS),
+        alluxioConf.getDuration(PropertyKey.USER_RPC_RETRY_MAX_SLEEP_MS));
     UnauthenticatedException lastException = null;
     // TODO(feng): unify worker client with AbstractClient
     while (retryPolicy.attempt()) {

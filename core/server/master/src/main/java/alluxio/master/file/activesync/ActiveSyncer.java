@@ -167,7 +167,8 @@ public class ActiveSyncer implements HeartbeatExecutor {
         LOG.debug("force full sync {}", ufsUri);
         RetryUtils.retry("Full Sync", () -> {
           mFileSystemMaster.activeSyncMetadata(alluxioUri, null, mSyncManager.getExecutor());
-        }, mSyncManager.getRetryPolicy());
+        }, RetryUtils.defaultActiveSyncClientRetry(
+            Configuration.getMs(PropertyKey.MASTER_UFS_ACTIVE_SYNC_RETRY_TIMEOUT)));
       } else {
         LOG.debug("incremental sync {}", ufsUri);
         RetryUtils.retry("Incremental Sync", () -> {
@@ -176,7 +177,8 @@ public class ActiveSyncer implements HeartbeatExecutor {
                   .map((uri) -> Objects.requireNonNull(mMountTable.reverseResolve(uri)).getUri())
                   .collect(Collectors.toSet()),
               mSyncManager.getExecutor());
-        }, mSyncManager.getRetryPolicy());
+        }, RetryUtils.defaultActiveSyncClientRetry(
+            Configuration.getMs(PropertyKey.MASTER_UFS_ACTIVE_SYNC_RETRY_TIMEOUT)));
       }
     } catch (IOException e) {
       LOG.warn("Failed to submit active sync job to master: ufsUri {}, syncPoint {} ", ufsUri,

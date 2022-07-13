@@ -63,7 +63,7 @@ public final class AlluxioFuse {
     LibFuse.loadLibrary(AlluxioFuseUtils.getVersionPreference(conf));
 
     FileSystemContext fsContext = FileSystemContext.create(conf);
-    conf = AlluxioFuseUtils.tryLoadingConfigFromMaster(fsContext);
+    conf = AlluxioFuseUtils.tryLoadingConfigFromMaster(conf, fsContext);
 
     final Optional<AlluxioFuseCliOpts> cliOpts = AlluxioFuseCliOpts.AlluxioFuseCliParser
         .parseAndCreateAlluxioFuseCliOpts(args);

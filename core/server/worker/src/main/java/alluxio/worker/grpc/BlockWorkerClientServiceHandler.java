@@ -62,7 +62,6 @@ import org.slf4j.LoggerFactory;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.OptionalInt;
 
 /**
  * Server side implementation of the gRPC BlockWorker interface.
@@ -175,12 +174,7 @@ public class BlockWorkerClientServiceHandler extends BlockWorkerGrpc.BlockWorker
   public void load(LoadRequest request, StreamObserver<LoadResponse> responseObserver) {
     RpcUtils.call(LOG, () -> {
       LoadResponse.Builder response = LoadResponse.newBuilder();
-      OptionalInt bandwidth = OptionalInt.empty();
-      if (request.hasBandwidth()) {
-        bandwidth = OptionalInt.of(request.getBandwidth());
-      }
-      List<BlockStatus> failures =
-          mBlockWorker.load(request.getBlocksList(), request.getTag(), bandwidth);
+      List<BlockStatus> failures = mBlockWorker.load(request);
       int numBlocks = request.getBlocksCount();
       TaskStatus taskStatus = TaskStatus.SUCCESS;
       if (failures.size() > 0) {

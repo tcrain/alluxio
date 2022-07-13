@@ -23,8 +23,8 @@ import alluxio.conf.PropertyKey;
 import alluxio.exception.PreconditionMessage;
 import alluxio.grpc.CacheRequest;
 import alluxio.resource.CloseableResource;
-import alluxio.retry.ExponentialTimeBoundedRetry;
 import alluxio.retry.RetryPolicy;
+import alluxio.retry.RetryUtils;
 import alluxio.util.CommonUtils;
 import alluxio.wire.BlockInfo;
 import alluxio.wire.BlockLocation;
@@ -114,12 +114,8 @@ public class AlluxioFileInStream extends FileInStream {
           conf.getDuration(PropertyKey.USER_BLOCK_READ_RETRY_SLEEP_MIN);
       final Duration blockReadRetrySleepMax =
           conf.getDuration(PropertyKey.USER_BLOCK_READ_RETRY_SLEEP_MAX);
-      mRetryPolicySupplier =
-          () -> ExponentialTimeBoundedRetry.builder()
-              .withMaxDuration(blockReadRetryMaxDuration)
-              .withInitialSleep(blockReadRetrySleepBase)
-              .withMaxSleep(blockReadRetrySleepMax)
-              .withSkipInitialSleep().build();
+      mRetryPolicySupplier = () -> RetryUtils.defaultBlockReadRetry(
+          blockReadRetryMaxDuration, blockReadRetrySleepBase, blockReadRetrySleepMax);
       mStatus = status;
       mOptions = options;
       mBlockStore = BlockStoreClient.create(mContext);
