@@ -47,7 +47,7 @@ import alluxio.grpc.RegisterWorkerPResponse;
 import alluxio.grpc.ServiceType;
 import alluxio.grpc.StorageList;
 import alluxio.master.MasterClientContext;
-import alluxio.retry.CountingRetry;
+import alluxio.retry.RetryUtils;
 import alluxio.security.authentication.AuthType;
 import alluxio.wire.TieredIdentity;
 import alluxio.wire.WorkerNetAddress;
@@ -360,7 +360,7 @@ public class BlockMasterClientTest {
     client.acquireRegisterLeaseWithBackoff(
         1L,
         1,
-         new CountingRetry(0));
+        RetryUtils.noRetryPolicy());
   }
 
   public void register(boolean stream) throws Exception {

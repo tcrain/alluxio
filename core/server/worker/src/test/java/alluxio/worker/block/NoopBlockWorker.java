@@ -14,11 +14,11 @@ package alluxio.worker.block;
 import alluxio.Server;
 import alluxio.exception.WorkerOutOfSpaceException;
 import alluxio.grpc.AsyncCacheRequest;
-import alluxio.grpc.Block;
 import alluxio.grpc.BlockStatus;
 import alluxio.grpc.CacheRequest;
 import alluxio.grpc.GetConfigurationPOptions;
 import alluxio.grpc.GrpcService;
+import alluxio.grpc.LoadRequest;
 import alluxio.grpc.ServiceType;
 import alluxio.proto.dataserver.Protocol;
 import alluxio.wire.Configuration;
@@ -30,7 +30,6 @@ import alluxio.worker.block.io.BlockWriter;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.OptionalInt;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -117,8 +116,7 @@ public class NoopBlockWorker implements BlockWorker {
     // noop
   }
 
-  @Override
-  public List<BlockStatus> load(List<Block> fileBlocks, String tag, OptionalInt bandwidth) {
+  @Override public List<BlockStatus> load(LoadRequest request) {
     return null;
   }
 

@@ -12,8 +12,6 @@
 package alluxio.worker.block;
 
 import alluxio.exception.WorkerOutOfSpaceException;
-import alluxio.grpc.Block;
-import alluxio.grpc.BlockStatus;
 import alluxio.proto.dataserver.Protocol;
 import alluxio.worker.SessionCleanable;
 import alluxio.worker.block.io.BlockReader;
@@ -23,9 +21,7 @@ import alluxio.worker.block.meta.TempBlockMeta;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.List;
 import java.util.Optional;
-import java.util.OptionalInt;
 import java.util.OptionalLong;
 import java.util.Set;
 
@@ -242,14 +238,4 @@ public interface BlockStore extends Closeable, SessionCleanable {
    */
   void requestSpace(long sessionId, long blockId, long additionalBytes)
       throws WorkerOutOfSpaceException, IOException;
-
-  /**
-   * Load blocks into alluxio.
-   *
-   * @param fileBlocks list of fileBlocks, one file blocks contains blocks belong to one file
-   * @param tag        the user/client name or specific identifier
-   * @param bandwidth  limited bandwidth to ufs
-   * @return load status for failed blocks
-   */
-  List<BlockStatus> load(List<Block> fileBlocks, String tag, OptionalInt bandwidth);
 }

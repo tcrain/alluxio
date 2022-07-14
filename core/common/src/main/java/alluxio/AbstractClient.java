@@ -91,7 +91,10 @@ public abstract class AbstractClient implements Client {
    * @param address the address
    */
   public AbstractClient(ClientContext context, InetSocketAddress address) {
-    this(context, address, RetryUtils::defaultClientRetry);
+    this(context, address, () -> RetryUtils.defaultClientRetry(
+        context.getClusterConf().getDuration(PropertyKey.USER_RPC_RETRY_MAX_DURATION),
+        context.getClusterConf().getDuration(PropertyKey.USER_RPC_RETRY_BASE_SLEEP_MS),
+        context.getClusterConf().getDuration(PropertyKey.USER_RPC_RETRY_MAX_SLEEP_MS)));
   }
 
   /**
