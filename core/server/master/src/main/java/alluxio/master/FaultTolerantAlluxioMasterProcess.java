@@ -111,6 +111,7 @@ final class FaultTolerantAlluxioMasterProcess extends AlluxioMasterProcess {
           continue;
         }
       } catch (Throwable t) {
+        LOG.error("Error in gain primary", t);
         if (Configuration.getBoolean(PropertyKey.MASTER_JOURNAL_BACKUP_WHEN_CORRUPTED)) {
           takeEmergencyBackup();
         }

@@ -319,6 +319,7 @@ public class LocalUnderFileSystem extends ConsistentUnderFileSystem
   public boolean mkdirs(String path, MkdirsOptions options) throws IOException {
     path = stripPath(path);
     File file = new File(path);
+    System.out.println(path);
     if (!options.getCreateParent()) {
       if (file.mkdir()) {
         setMode(file.getPath(), options.getMode().toShort());
