@@ -291,9 +291,11 @@ public final class MultiProcessCluster {
       }
       mProperties.put(entry.getKey(), entry.getValue());
     }
-    mProperties.put(PropertyKey.MASTER_MOUNT_TABLE_ROOT_UFS,
-        PathUtils.concatPath(mWorkDir, "underFSStorage"));
-    new File((String) mProperties.get(PropertyKey.MASTER_MOUNT_TABLE_ROOT_UFS)).mkdirs();
+    if (!mProperties.containsKey(PropertyKey.MASTER_MOUNT_TABLE_ROOT_UFS)) {
+      mProperties.put(PropertyKey.MASTER_MOUNT_TABLE_ROOT_UFS,
+          PathUtils.concatPath(mWorkDir, "underFSStorage"));
+      new File((String) mProperties.get(PropertyKey.MASTER_MOUNT_TABLE_ROOT_UFS)).mkdirs();
+    }
     if (format) {
       formatJournal();
     }

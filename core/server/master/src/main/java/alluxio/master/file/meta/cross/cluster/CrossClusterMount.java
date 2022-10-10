@@ -196,7 +196,8 @@ public class CrossClusterMount implements Closeable {
    * @param list the list of mounts
    */
   public synchronized void setExternalMountList(MountList list) throws UnknownHostException {
-    LOG.info("Setting external mount list {} for cross cluster subscriptions", list);
+    LOG.info("Setting external mount list {} for cross cluster subscriptions,"
+            + " local mount list is {}", list, mLocalMounts);
     if (list.getClusterId().equals(mLocalClusterId)) {
       throw new IllegalStateException(
           "External mount has same cluster id as local" + mLocalClusterId);

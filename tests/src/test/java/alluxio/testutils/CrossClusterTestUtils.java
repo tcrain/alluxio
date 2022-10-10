@@ -23,11 +23,13 @@ import alluxio.util.CommonUtils;
 import alluxio.util.WaitForOptions;
 import alluxio.util.io.PathUtils;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.Assert;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.concurrent.TimeoutException;
 
 public final class CrossClusterTestUtils {
@@ -80,6 +82,35 @@ public final class CrossClusterTestUtils {
     }
   }
 
+  public static boolean checkFileEquals(AlluxioURI path, FileSystem ... fsArray) {
+    return Arrays.stream(fsArray).map(fs -> {
+      try {
+        String nxt = new String(IOUtils.toByteArray(fs.openFile(path)));
+        System.out.println(nxt);
+        return nxt;
+      } catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+    }).distinct().count() == 1;
+  }
+
+  public static boolean checkFileSameLength(AlluxioURI path, FileSystem ... fsArray) {
+    return Arrays.stream(fsArray).map(fs -> {
+      try {
+        int nxt = IOUtils.toByteArray(fs.openFile(path)).length;
+        System.out.println(nxt);
+        return nxt;
+      } catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+    }).distinct().count() == 1;
+  }
+
+  /**
+   * Assumes that the root path is not a cross cluster mount.
+   * Will ensure that files on the root path are not synced,
+   * and that files on mount path are synced.
+   */
   public static void checkNonCrossClusterWrite(
       String ufsPath, AlluxioURI mountPath, FileSystem client1, FileSystem client2)
       throws Exception {

@@ -144,6 +144,59 @@ public class CrossClusterIntegrationTest extends BaseIntegrationTest {
   }
 
   @Test
+  public void crossClusterRootMountWrite() throws Exception {
+    String ufsPath = mFolder.newFolder().getAbsoluteFile().toString();
+    String ufsUri = "file://" + ufsPath;
+    final int NUM_MASTERS = 3;
+    final int NUM_WORKERS = 1;
+    mCluster1 = MultiProcessCluster.newBuilder(PortCoordination.CROSS_CLUSTER_CLUSTER1)
+        .setClusterName("crossCluster_test_write1")
+        .setNumMasters(1)
+        .setNumWorkers(NUM_WORKERS)
+        .addProperties(mBaseProperties)
+        .addProperty(PropertyKey.MASTER_MOUNT_TABLE_ROOT_CROSS_CLUSTER, true)
+        .addProperty(PropertyKey.MASTER_MOUNT_TABLE_ROOT_UFS, ufsUri)
+        .addProperty(PropertyKey.MASTER_CROSS_CLUSTER_ID, "c1")
+        .includeCrossClusterStandalone()
+        .build();
+    mCluster1.start();
+    mCluster2 = MultiProcessCluster.newBuilder(PortCoordination.CROSS_CLUSTER_CLUSTER2)
+        .setClusterName("crossCluster_test_write2")
+        .setNumMasters(NUM_MASTERS)
+        .setNumWorkers(NUM_WORKERS)
+        .addProperty(PropertyKey.MASTER_CROSS_CLUSTER_RPC_ADDRESSES,
+            addressesToString(mCluster1.getCrossClusterAddresses()))
+        .addProperties(mBaseProperties)
+        .addProperty(PropertyKey.MASTER_MOUNT_TABLE_ROOT_CROSS_CLUSTER, true)
+        .addProperty(PropertyKey.MASTER_MOUNT_TABLE_ROOT_UFS, ufsUri)
+        .addProperty(PropertyKey.MASTER_CROSS_CLUSTER_ID, "c2")
+        .build();
+    mCluster2.start();
+
+    AlluxioURI mountPath = new AlluxioURI("/");
+
+    FileSystemCrossCluster client1 = mCluster1.getCrossClusterClient();
+    FileSystemCrossCluster client2 = mCluster2.getCrossClusterClient();
+
+    // be sure new files are synced from both clusters
+    checkClusterSyncAcrossAll(mountPath, client1, client2);
+
+    // restart a master on cluster two
+    int killedMasterIndex = mCluster2.waitForAndKillPrimaryMaster(KILL_TIMEOUT);
+    mCluster2.getPrimaryMasterIndex(START_TIMEOUT);
+
+    // be sure new files are synced from both clusters
+    checkClusterSyncAcrossAll(mountPath, client1, client2);
+
+    // kill the remaining masters and restart them
+    mCluster2.stopMasters();
+    mCluster2.startMasters();
+
+    // be sure new files are synced from both clusters
+    checkClusterSyncAcrossAll(mountPath, client1, client2);
+  }
+
+  @Test
   public void crossClusterWrite() throws Exception {
     final int NUM_MASTERS = 1;
     final int NUM_WORKERS = 1;
@@ -346,6 +399,15 @@ public class CrossClusterIntegrationTest extends BaseIntegrationTest {
     clusterSetup(mountPath2, client1, client2);
 
     // be sure new files are synced from both clusters on the new mount point
+    checkClusterSyncAcrossAll(mountPath2, client1, client2);
+
+    // be sure if we kill all masters we can regain the state
+    mCluster1.stopMasters();
+    mCluster1.startMasters();
+    mCluster2.stopMasters();
+    mCluster2.startMasters();
+
+    checkClusterSyncAcrossAll(mountPath, client1, client2);
     checkClusterSyncAcrossAll(mountPath2, client1, client2);
   }
 

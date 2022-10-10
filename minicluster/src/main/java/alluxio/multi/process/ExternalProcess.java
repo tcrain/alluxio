@@ -58,8 +58,8 @@ public final class ExternalProcess {
     String java = PathUtils.concatPath(System.getProperty("java.home"), "bin", "java");
     String classpath = System.getProperty("java.class.path");
     List<String> args = new ArrayList<>(Arrays.asList(java,
-        //"-agentlib:jdwp=transport=dt_socket,server=y,suspend=n",
-        //"-agentpath:/Users/tylercrain/YourKit-JavaProfiler-2022.3/bin/mac/"
+        // "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n",
+        // "-agentpath:/Users/tylercrain/YourKit-JavaProfiler-2022.3/bin/mac/"
         // + "libyjpagent.dylib=delay=10000,listen=localhost",
         "-cp", classpath));
     // List<String> args = new ArrayList<>(Arrays.asList(java, "-cp", classpath));

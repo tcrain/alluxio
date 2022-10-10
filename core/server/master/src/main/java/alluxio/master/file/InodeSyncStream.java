@@ -291,6 +291,9 @@ public class InodeSyncStream {
   private final int mConcurrencyLevel =
       Configuration.getInt(PropertyKey.MASTER_METADATA_SYNC_CONCURRENCY_LEVEL);
 
+  /** If the root path is contained in a cross cluster mount. */
+  private final boolean mRootSchemeCrossCluster;
+
   private final FileSystemMasterAuditContext mAuditContext;
   private final Function<LockedInodePath, Inode> mAuditContextSrcInodeFunc;
 
@@ -324,7 +327,7 @@ public class InodeSyncStream {
       RpcContext rpcContext, DescendantType descendantType, FileSystemMasterCommonPOptions options,
       @Nullable FileSystemMasterAuditContext auditContext,
       @Nullable Function<LockedInodePath, Inode> auditContextSrcInodeFunc,
-      boolean forceSync, boolean loadOnly, boolean loadAlways) {
+      boolean forceSync, boolean loadOnly, boolean loadAlways) throws InvalidPathException {
     mPendingPaths = new ConcurrentLinkedDeque<>();
     mTraverseType = Configuration.getEnum(PropertyKey.MASTER_METADATA_SYNC_TRAVERSAL_ORDER,
         MetadataSyncTraversalOrder.class);
@@ -347,6 +350,7 @@ public class InodeSyncStream {
     mAuditContextSrcInodeFunc = auditContextSrcInodeFunc;
     mSyncInterval = options.hasSyncIntervalMs() ? options.getSyncIntervalMs() :
         Configuration.getMs(PropertyKey.USER_FILE_METADATA_SYNC_INTERVAL);
+    mRootSchemeCrossCluster = mMountTable.isCrossClusterMount(mRootScheme.getPath());
     // If an absent cache entry was more recent than this value, then it is valid for this sync
     long validCacheTime;
     if (loadOnly) {
@@ -355,6 +359,12 @@ public class InodeSyncStream {
       } else {
         validCacheTime = UfsAbsentPathCache.ALWAYS;
       }
+    } else if (mRootSchemeCrossCluster) {
+      // cross cluster uses only validations and invalidations to check sync time
+      validCacheTime = UfsAbsentPathCache.NEVER;
+    } else if (mSyncInterval == -1) {
+      // if a negative sync interval, then an absent cache entry is always valid
+      validCacheTime = UfsAbsentPathCache.ALWAYS;
     } else {
       validCacheTime = mClock.millis() - mSyncInterval;
     }
@@ -381,7 +391,7 @@ public class InodeSyncStream {
   public InodeSyncStream(LockingScheme rootScheme, DefaultFileSystemMaster fsMaster,
       UfsSyncPathCache syncPathCache,
       RpcContext rpcContext, DescendantType descendantType, FileSystemMasterCommonPOptions options,
-      boolean forceSync, boolean loadOnly, boolean loadAlways) {
+      boolean forceSync, boolean loadOnly, boolean loadAlways) throws InvalidPathException {
     this(rootScheme, fsMaster, syncPathCache, rpcContext, descendantType, options, null, null,
         forceSync, loadOnly, loadAlways);
   }
@@ -482,7 +492,7 @@ public class InodeSyncStream {
     } catch (FileDoesNotExistException e) {
       LOG.warn("Failed to sync metadata on root path {} due to FileDoesNotExistException",
           this);
-      if (mMountTable.isCrossClusterMount(mRootScheme.getPath())) {
+      if (mRootSchemeCrossCluster) {
         // in cross cluster if the file does not exist we consider this a successful
         // sync as on every file change we will get a new invalidation time that will
         // cause a new sync

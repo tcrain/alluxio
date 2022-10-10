@@ -718,6 +718,7 @@ public final class MountTable implements DelegatingJournaled {
       mUfsSyncPathCache = new UfsSyncPathCache(clock, reverseResolution);
       mCrossClusterState = new CrossClusterMasterState(mUfsSyncPathCache,
           table);
+      mCrossClusterState.addLocalMount(mountInfo);
     }
 
     /**
@@ -770,10 +771,11 @@ public final class MountTable implements DelegatingJournaled {
     public void resetState() {
       MountInfo mountInfo = mMountTable.get(ROOT);
       mMountTable.clear();
+      mCrossClusterState.resetState();
       if (mountInfo != null) {
         mMountTable.put(ROOT, mountInfo);
+        mCrossClusterState.addLocalMount(mountInfo);
       }
-      mCrossClusterState.resetState();
     }
 
     /**
