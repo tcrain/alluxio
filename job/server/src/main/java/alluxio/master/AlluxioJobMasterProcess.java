@@ -62,6 +62,9 @@ public class AlluxioJobMasterProcess extends AlluxioSimpleMasterProcess {
       mJobMaster = new JobMaster(
           new MasterContext<>(mJournalSystem, null, ufsManager), fileSystem, fsContext,
           ufsManager);
+      if (!mJournalSystem.isFormatted()) {
+        mJournalSystem.format();
+      }
     } catch (Exception e) {
       LOG.error("Failed to create job master", e);
       throw new RuntimeException("Failed to create job master", e);

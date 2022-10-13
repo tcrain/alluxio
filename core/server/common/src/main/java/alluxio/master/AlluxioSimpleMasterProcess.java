@@ -89,14 +89,6 @@ public abstract class AlluxioSimpleMasterProcess extends MasterProcess {
               (int) Configuration.getMs(PropertyKey.NETWORK_HOST_RESOLUTION_TIMEOUT_MS)));
     }
     try {
-      if (!mJournalSystem.isFormatted()) {
-        mJournalSystem.format();
-      }
-    } catch (Exception e) {
-      LOG.error("Failed to create {} master", mMasterName, e);
-      throw new RuntimeException(String.format("Failed to create %s master", mMasterName), e);
-    }
-    try {
       stopServing();
     } catch (Exception e) {
       throw new RuntimeException(e);
