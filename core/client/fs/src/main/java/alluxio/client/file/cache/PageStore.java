@@ -46,13 +46,13 @@ public interface PageStore extends AutoCloseable {
     final PageStore pageStore;
     switch (options.getType()) {
       case LOCAL:
-        pageStore = new LocalPageStore(options.toOptions());
+        pageStore = new LocalPageStore(options);
         break;
       case ROCKS:
-        pageStore = RocksPageStore.open(options.toOptions());
+        pageStore = RocksPageStore.open(options);
         break;
       case MEM:
-        pageStore = new MemoryPageStore();
+        pageStore = new MemoryPageStore((int) options.getPageSize());
         break;
       default:
         throw new IllegalArgumentException(
@@ -180,6 +180,15 @@ public interface PageStore extends AutoCloseable {
    * @param fileId
    */
   default void commit(String fileId) throws IOException {
+    commit(fileId, fileId);
+  }
+
+  /**
+   * Commit a temporary file with a new file ID.
+   * @param fileId
+   * @param newFileId
+   */
+  default void commit(String fileId, String newFileId) throws IOException {
     throw new UnsupportedOperationException();
   }
 
