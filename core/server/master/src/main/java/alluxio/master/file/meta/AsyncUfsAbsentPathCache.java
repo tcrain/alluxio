@@ -82,8 +82,7 @@ public class AsyncUfsAbsentPathCache implements UfsAbsentPathCache {
     mMountTable = mountTable;
     mClock = clock;
     mCurrentPaths = new ConcurrentHashMap<>(8, 0.95f, 8);
-    mCache = CacheBuilder.newBuilder().maximumSize(MAX_PATHS).concurrencyLevel(Configuration.getInt(
-        PropertyKey.MASTER_UFS_PATH_CACHE_THREADS)).recordStats().build();
+    mCache = CacheBuilder.newBuilder().maximumSize(MAX_PATHS).recordStats().build();
     /* Number of threads for the async pool. */
 
     mPool = new ThreadPoolExecutor(numThreads, numThreads, THREAD_KEEP_ALIVE_SECONDS,
