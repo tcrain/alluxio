@@ -356,7 +356,7 @@ public abstract class Cache<K, V> implements Closeable {
       }
       if (evictionCount > 0) {
         mStatsCounter.recordEvictions(evictionCount);
-        LOG.debug("{}: Evicted {} entries in {}ms", mName, evictionCount,
+        LOG.info("{}: Evicted {} entries in {}ms", mName, evictionCount,
             (System.nanoTime() - evictionStart) / Constants.MS_NANO);
       }
     }

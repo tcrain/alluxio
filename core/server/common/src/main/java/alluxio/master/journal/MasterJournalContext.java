@@ -11,16 +11,20 @@
 
 package alluxio.master.journal;
 
+import alluxio.Constants;
 import alluxio.ProcessUtils;
 import alluxio.conf.Configuration;
 import alluxio.conf.PropertyKey;
 import alluxio.exception.JournalClosedException;
 import alluxio.exception.status.AlluxioStatusException;
 import alluxio.exception.status.UnavailableException;
+import alluxio.metrics.MetricKey;
+import alluxio.metrics.MetricsSystem;
 import alluxio.proto.journal.Journal.JournalEntry;
 import alluxio.retry.RetryPolicy;
 import alluxio.retry.TimeoutRetry;
 
+import com.codahale.metrics.Timer;
 import com.google.common.base.Preconditions;
 import io.grpc.Status;
 import org.apache.ratis.protocol.exceptions.NotLeaderException;
@@ -44,6 +48,8 @@ public final class MasterJournalContext implements JournalContext {
       Configuration.getMs(PropertyKey.MASTER_JOURNAL_FLUSH_TIMEOUT_MS);
   private static final int FLUSH_RETRY_INTERVAL_MS =
       (int) Configuration.getMs(PropertyKey.MASTER_JOURNAL_FLUSH_RETRY_INTERVAL);
+  private static final long FLUSH_WARN_THRESHOLD_MS =
+      Configuration.getMs(PropertyKey.MASTER_JOURNAL_FLUSH_WARN_THRESHOLD_MS);
 
   private final AsyncJournalWriter mAsyncJournalWriter;
   private long mFlushCounter;
@@ -74,10 +80,16 @@ public final class MasterJournalContext implements JournalContext {
       return;
     }
 
+    Timer.Context timer = MetricsSystem
+        .timer(MetricKey.MASTER_JOURNAL_FLUSH_TIMER.getName()).time();
     RetryPolicy retry = new TimeoutRetry(FLUSH_RETRY_TIMEOUT_MS, FLUSH_RETRY_INTERVAL_MS);
     while (retry.attempt()) {
       try {
         mAsyncJournalWriter.flush(mFlushCounter);
+        long ms = timer.stop() / Constants.MS_NANO;
+        if (ms  > FLUSH_WARN_THRESHOLD_MS) {
+          LOG.warn("Took {} milliseconds to flush the journal", ms);
+        }
         return;
       } catch (NotLeaderException | JournalClosedException e) {
         throw new UnavailableException(String.format("Failed to complete request: %s",

@@ -2806,6 +2806,14 @@ public final class PropertyKey implements Comparable<PropertyKey> {
           .setConsistencyCheckLevel(ConsistencyCheckLevel.WARN)
           .setScope(Scope.MASTER)
           .build();
+  public static final PropertyKey MASTER_JOURNAL_FLUSH_WARN_THRESHOLD_MS =
+      durationBuilder(Name.MASTER_JOURNAL_FLUSH_WARN_THRESHOLD_MS)
+          .setDefaultValue("5sec")
+          .setDescription("When the an operation waits for longer than this for its entries "
+              + "to be flushed a warning will be logged.")
+          .setConsistencyCheckLevel(ConsistencyCheckLevel.WARN)
+          .setScope(Scope.MASTER)
+          .build();
   public static final PropertyKey MASTER_JOURNAL_FLUSH_TIMEOUT_MS =
       durationBuilder(Name.MASTER_JOURNAL_FLUSH_TIMEOUT_MS)
           .setAlias("alluxio.master.journal.flush.timeout.ms")
@@ -7535,6 +7543,8 @@ public final class PropertyKey implements Comparable<PropertyKey> {
         "alluxio.master.journal.exit.on.demotion";
     public static final String MASTER_JOURNAL_FLUSH_BATCH_TIME_MS =
         "alluxio.master.journal.flush.batch.time";
+    public static final String MASTER_JOURNAL_FLUSH_WARN_THRESHOLD_MS =
+        "alluxio.master.journal.flush.warn.threshold.ms";
     public static final String MASTER_JOURNAL_FLUSH_TIMEOUT_MS =
         "alluxio.master.journal.flush.timeout";
     public static final String MASTER_JOURNAL_FLUSH_RETRY_INTERVAL =

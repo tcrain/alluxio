@@ -490,7 +490,7 @@ public class InodeSyncStream {
         throw new RuntimeException(e);
       }
     } catch (FileDoesNotExistException e) {
-      LOG.warn("Failed to sync metadata on root path {} because it"
+      LOG.debug("Failed to sync metadata on root path {} because it"
               + " does not exist on the UFS or in Alluxio", this);
       failedSyncPathCount++;
     } catch (BlockInfoException | FileAlreadyCompletedException

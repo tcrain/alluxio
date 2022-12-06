@@ -893,7 +893,15 @@ public final class MetricKey implements Comparable<MetricKey> {
           .build();
   public static final MetricKey MASTER_JOURNAL_FLUSH_TIMER =
       new Builder("Master.JournalFlushTimer")
-          .setDescription("The timer statistics of journal flush")
+          .setDescription("The timer statistics of journal flush. This represents the time to "
+              + "a single flush operation by the journal writer.")
+          .setMetricType(MetricType.TIMER)
+          .build();
+  public static final MetricKey MASTER_JOURNAL_OPERATION_FLUSH_TIMER =
+      new Builder("Master.JournalOperationFlushTimer")
+          .setDescription("The timer statistics of journal flush per user operation. "
+              + "This represents the time waited by a user operation (e.g. create, delete, etc.) "
+              + "for its journal entries to be flushed.")
           .setMetricType(MetricType.TIMER)
           .build();
   public static final MetricKey MASTER_JOURNAL_SEQUENCE_NUMBER =
