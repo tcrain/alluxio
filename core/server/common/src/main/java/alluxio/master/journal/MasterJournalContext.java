@@ -48,8 +48,8 @@ public final class MasterJournalContext implements JournalContext {
       Configuration.getMs(PropertyKey.MASTER_JOURNAL_FLUSH_TIMEOUT_MS);
   private static final int FLUSH_RETRY_INTERVAL_MS =
       (int) Configuration.getMs(PropertyKey.MASTER_JOURNAL_FLUSH_RETRY_INTERVAL);
-  private static final long FLUSH_WARN_THRESHOLD_MS =
-      Configuration.getMs(PropertyKey.MASTER_JOURNAL_FLUSH_WARN_THRESHOLD_MS);
+  private static final long FLUSH_WARN_THRESHOLD_NANOS =
+      Configuration.getMs(PropertyKey.MASTER_JOURNAL_FLUSH_WARN_THRESHOLD_MS) * Constants.MS_NANO;
 
   private final AsyncJournalWriter mAsyncJournalWriter;
   private long mFlushCounter;
@@ -86,9 +86,9 @@ public final class MasterJournalContext implements JournalContext {
     while (retry.attempt()) {
       try {
         mAsyncJournalWriter.flush(mFlushCounter);
-        long ms = timer.stop() / Constants.MS_NANO;
-        if (ms  > FLUSH_WARN_THRESHOLD_MS) {
-          LOG.warn("Took {} milliseconds to flush the journal", ms);
+        long nanos = timer.stop();
+        if (nanos > FLUSH_WARN_THRESHOLD_NANOS) {
+          LOG.warn("Took {} milliseconds to flush the journal", nanos / Constants.MS_NANO);
         }
         return;
       } catch (NotLeaderException | JournalClosedException e) {

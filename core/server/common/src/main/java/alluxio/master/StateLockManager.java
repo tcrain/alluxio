@@ -16,13 +16,17 @@ import alluxio.collections.ConcurrentHashSet;
 import alluxio.conf.Configuration;
 import alluxio.conf.PropertyKey;
 import alluxio.exception.ExceptionMessage;
+import alluxio.metrics.MetricKey;
+import alluxio.metrics.MetricsSystem;
 import alluxio.resource.LockResource;
 import alluxio.retry.RetryUtils;
 import alluxio.util.ThreadFactoryUtils;
 import alluxio.util.ThreadUtils;
 import alluxio.util.logging.SamplingLogger;
 
+import com.codahale.metrics.Timer;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Stopwatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,6 +60,11 @@ public class StateLockManager {
   private static final SamplingLogger SAMPLING_LOG =
       new SamplingLogger(LOG, 30 * Constants.SECOND_MS);
   private static final int READ_LOCK_COUNT_HIGH = 20000;
+
+  private final long mAcquireWarnThresholdNanos = Configuration.getMs(
+      PropertyKey.MASTER_BACKUP_STATE_LOCK_ACQUIRE_WARN_THRESHOLD_MS) * Constants.MS_NANO;
+  private final boolean mMeasureAcquireTime = Configuration.getBoolean(
+      PropertyKey.MASTER_BACKUP_STATE_LOCK_ACQUIRE_METRIC_ENABLE);
 
   /** The state-lock. */
   private ReentrantReadWriteLock mStateLock = new ReentrantReadWriteLock(true);
@@ -159,7 +168,20 @@ public class StateLockManager {
     // Register thread for interrupt cycle.
     mSharedWaitersAndHolders.add(Thread.currentThread());
     // Grab the lock interruptibly.
-    mStateLock.readLock().lockInterruptibly();
+    Stopwatch sw = Stopwatch.createStarted();
+    try {
+      mStateLock.readLock().lockInterruptibly();
+    } finally {
+      long nanos = sw.elapsed(TimeUnit.NANOSECONDS);
+      if (mMeasureAcquireTime) {
+        MetricsSystem.timer(MetricKey.MASTER_STATE_LOCK_ACQUIRE_SHARED_TIMER.getName())
+            .update(nanos, TimeUnit.NANOSECONDS);
+      }
+      if (nanos > mAcquireWarnThresholdNanos) {
+        LOG.warn("Took {} ms to acquire the state-lock in shared mode (or was interrupted).",
+            sw.elapsed(TimeUnit.MILLISECONDS));
+      }
+    }
     // Return the resource.
     // Register an action to remove the thread from holders registry before releasing the lock.
     return new LockResource(mStateLock.readLock(), false, false, () -> {
@@ -195,59 +217,63 @@ public class StateLockManager {
       RetryUtils.RunnableThrowsIOException beforeAttempt)
       throws TimeoutException, InterruptedException, IOException {
     LOG.debug("Thread-{} entered lockExclusive().", ThreadUtils.getCurrentThreadIdentifier());
-    // Run the grace cycle.
-    GraceMode graceMode = lockOptions.getGraceMode();
-    boolean graceCycleEntered = false;
-    boolean lockAcquired = false;
-    long deadlineMs = System.currentTimeMillis() + lockOptions.getGraceCycleTimeoutMs();
-    while (System.currentTimeMillis() < deadlineMs) {
-      if (!graceCycleEntered) {
-        graceCycleEntered = true;
-        LOG.info("Thread-{} entered grace-cycle of try-sleep: {}ms-{}ms for the total of {}ms",
-            ThreadUtils.getCurrentThreadIdentifier(), lockOptions.getGraceCycleTryMs(),
-            lockOptions.getGraceCycleSleepMs(), lockOptions.getGraceCycleTimeoutMs());
-      }
-      if (beforeAttempt != null) {
-        beforeAttempt.run();
-      }
-      if (mStateLock.writeLock().tryLock(lockOptions.getGraceCycleTryMs(), TimeUnit.MILLISECONDS)) {
-        lockAcquired = true;
-        break;
-      } else {
-        long remainingWaitMs = deadlineMs - System.currentTimeMillis();
-        if (remainingWaitMs > 0) {
-          Thread.sleep(Math.min(lockOptions.getGraceCycleSleepMs(), remainingWaitMs));
+    try (Timer.Context ignored = MetricsSystem.timer(
+        MetricKey.MASTER_STATE_LOCK_ACQUIRE_EXCLUSIVE_TIMER.getName()).time()) {
+      // Run the grace cycle.
+      GraceMode graceMode = lockOptions.getGraceMode();
+      boolean graceCycleEntered = false;
+      boolean lockAcquired = false;
+      long deadlineMs = System.currentTimeMillis() + lockOptions.getGraceCycleTimeoutMs();
+      while (System.currentTimeMillis() < deadlineMs) {
+        if (!graceCycleEntered) {
+          graceCycleEntered = true;
+          LOG.info("Thread-{} entered grace-cycle of try-sleep: {}ms-{}ms for the total of {}ms",
+              ThreadUtils.getCurrentThreadIdentifier(), lockOptions.getGraceCycleTryMs(),
+              lockOptions.getGraceCycleSleepMs(), lockOptions.getGraceCycleTimeoutMs());
         }
-      }
-    }
-    if (lockAcquired) { // Lock was acquired within grace-cycle.
-      LOG.info("Thread-{} acquired the lock within grace-cycle.",
-          ThreadUtils.getCurrentThreadIdentifier());
-      activateInterruptCycle();
-    } else { // Lock couldn't be acquired by grace-cycle.
-      if (graceMode == GraceMode.TIMEOUT) {
-        throw new TimeoutException(
-            ExceptionMessage.STATE_LOCK_TIMED_OUT.getMessage(lockOptions.getGraceCycleTimeoutMs()));
-      }
-      // Activate the interrupt cycle before entering the lock because it might wait in the queue.
-      activateInterruptCycle();
-      // Force the lock.
-      LOG.info("Thread-{} forcing the lock with {} waiters/holders: {}",
-          ThreadUtils.getCurrentThreadIdentifier(), mSharedWaitersAndHolders.size(),
-          mSharedWaitersAndHolders.stream().map((th) -> Long.toString(th.getId()))
-              .collect(Collectors.joining(",")));
-      try {
         if (beforeAttempt != null) {
           beforeAttempt.run();
         }
-        if (!mStateLock.writeLock().tryLock(mForcedDurationMs, TimeUnit.MILLISECONDS)) {
-          throw new TimeoutException(ExceptionMessage.STATE_LOCK_TIMED_OUT
-              .getMessage(lockOptions.getGraceCycleTimeoutMs() + mForcedDurationMs));
+        if (mStateLock.writeLock().tryLock(lockOptions.getGraceCycleTryMs(),
+            TimeUnit.MILLISECONDS)) {
+          lockAcquired = true;
+          break;
+        } else {
+          long remainingWaitMs = deadlineMs - System.currentTimeMillis();
+          if (remainingWaitMs > 0) {
+            Thread.sleep(Math.min(lockOptions.getGraceCycleSleepMs(), remainingWaitMs));
+          }
         }
-      } catch (Throwable throwable) {
-        // Deactivate interrupter if lock acquisition was not successful.
-        deactivateInterruptCycle();
-        throw throwable;
+      }
+      if (lockAcquired) { // Lock was acquired within grace-cycle.
+        LOG.info("Thread-{} acquired the lock within grace-cycle.",
+            ThreadUtils.getCurrentThreadIdentifier());
+        activateInterruptCycle();
+      } else { // Lock couldn't be acquired by grace-cycle.
+        if (graceMode == GraceMode.TIMEOUT) {
+          throw new TimeoutException(ExceptionMessage.STATE_LOCK_TIMED_OUT
+              .getMessage(lockOptions.getGraceCycleTimeoutMs()));
+        }
+        // Activate the interrupt cycle before entering the lock because it might wait in the queue.
+        activateInterruptCycle();
+        // Force the lock.
+        LOG.info("Thread-{} forcing the lock with {} waiters/holders: {}",
+            ThreadUtils.getCurrentThreadIdentifier(), mSharedWaitersAndHolders.size(),
+            mSharedWaitersAndHolders.stream().map((th) -> Long.toString(th.getId()))
+                .collect(Collectors.joining(",")));
+        try {
+          if (beforeAttempt != null) {
+            beforeAttempt.run();
+          }
+          if (!mStateLock.writeLock().tryLock(mForcedDurationMs, TimeUnit.MILLISECONDS)) {
+            throw new TimeoutException(ExceptionMessage.STATE_LOCK_TIMED_OUT
+                .getMessage(lockOptions.getGraceCycleTimeoutMs() + mForcedDurationMs));
+          }
+        } catch (Throwable throwable) {
+          // Deactivate interrupter if lock acquisition was not successful.
+          deactivateInterruptCycle();
+          throw throwable;
+        }
       }
     }
 

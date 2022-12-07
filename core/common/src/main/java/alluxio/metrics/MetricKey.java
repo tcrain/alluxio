@@ -938,6 +938,20 @@ public final class MetricKey implements Comparable<MetricKey> {
           .setDescription("The timer statistics of journal gain primacy")
           .setMetricType(MetricType.TIMER)
           .build();
+  public static final MetricKey MASTER_STATE_LOCK_ACQUIRE_SHARED_TIMER =
+      new Builder("Master.StateLockAcquireStaredTimer")
+          .setDescription(String.format("The time needed to acquire the state-lock in shared mode, "
+                  + "or be interrupted before acquiring the lock."
+                  + "Must be enabled by the property key %s.",
+              PropertyKey.MASTER_BACKUP_STATE_LOCK_ACQUIRE_METRIC_ENABLE.getName()))
+          .setMetricType(MetricType.TIMER)
+          .build();
+  public static final MetricKey MASTER_STATE_LOCK_ACQUIRE_EXCLUSIVE_TIMER =
+      new Builder("Master.StateLockAcquireExclusiveTimer")
+          .setDescription("The time needed to acquire the state-lock in exclusive mode, "
+              + "or be timed out waiting to acquire the lock.")
+          .setMetricType(MetricType.TIMER)
+          .build();
   public static final MetricKey MASTER_UFS_JOURNAL_CATCHUP_TIMER =
       new Builder("Master.UfsJournalCatchupTimer")
           .setDescription("The timer statistics of journal catchup"

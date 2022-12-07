@@ -1974,6 +1974,23 @@ public final class PropertyKey implements Comparable<PropertyKey> {
           .setConsistencyCheckLevel(ConsistencyCheckLevel.ENFORCE)
           .setScope(Scope.MASTER)
           .build();
+  public static final PropertyKey MASTER_BACKUP_STATE_LOCK_ACQUIRE_METRIC_ENABLE =
+      booleanBuilder(Name.MASTER_BACKUP_STATE_LOCK_ACQUIRE_METRIC_ENABLE)
+          .setDefaultValue(false)
+          .setDescription("If true, a metric measuring the amount of time needed "
+              + "to acquire the state lock in shared mode will be measured. "
+              + "This will add a small amount of overhead to every operation.")
+          .setConsistencyCheckLevel(ConsistencyCheckLevel.WARN)
+          .setScope(Scope.MASTER)
+          .build();
+  public static final PropertyKey MASTER_BACKUP_STATE_LOCK_ACQUIRE_WARN_THRESHOLD_MS =
+      durationBuilder(Name.MASTER_BACKUP_STATE_LOCK_ACQUIRE_WARN_THRESHOLD_MS)
+          .setDefaultValue("5s")
+          .setDescription("If acquiring the state-lock in shared mode takes longer "
+              + "than this value then a warning will be logged.")
+          .setConsistencyCheckLevel(ConsistencyCheckLevel.WARN)
+          .setScope(Scope.MASTER)
+          .build();
   public static final PropertyKey MASTER_BACKUP_SUSPEND_TIMEOUT =
       durationBuilder(Name.MASTER_BACKUP_SUSPEND_TIMEOUT)
           .setDefaultValue("3min")
@@ -7482,6 +7499,10 @@ public final class PropertyKey implements Comparable<PropertyKey> {
         "alluxio.master.backup.state.lock.forced.duration";
     public static final String MASTER_BACKUP_STATE_LOCK_INTERRUPT_CYCLE_INTERVAL =
         "alluxio.master.backup.state.lock.interrupt.cycle.interval";
+    public static final String MASTER_BACKUP_STATE_LOCK_ACQUIRE_METRIC_ENABLE =
+        "alluxio.master.backup.state.lock.acquire.metric.enable";
+    public static final String MASTER_BACKUP_STATE_LOCK_ACQUIRE_WARN_THRESHOLD_MS =
+        "alluxio.master.backup.state.lock.acquire.warn.threshold.ms";
     public static final String MASTER_BACKUP_SUSPEND_TIMEOUT =
         "alluxio.master.backup.suspend.timeout";
     public static final String MASTER_BLOCK_SCAN_INVALID_BATCH_MAX_SIZE =
