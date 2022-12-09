@@ -244,6 +244,32 @@ public final class MetricKey implements Comparable<MetricKey> {
     return MetricKey.MASTER_METADATA_SYNC_UFS_MOUNT + Long.toString(mountId);
   }
 
+  /**
+   * Creates a set of metrics for a {@link StatsCounter} object for measuring
+   * operations of cache type objects.
+   * @param baseName the base name for the metrics
+   * @return the {@link StatsCounter} object
+   */
+  public static StatsCounter generateStatsCounter(String baseName) {
+    return new StatsCounter(new Builder(baseName + ".EvictionTimer")
+        .setMetricType(MetricType.TIMER).build(),
+        new Builder(baseName + "Evictions")
+            .setDescription("Number of evictions from the cache")
+            .setMetricType(MetricType.COUNTER).build(),
+        new Builder(baseName + "Hits")
+            .setDescription("Number of hits in the cache")
+            .setMetricType(MetricType.COUNTER).build(),
+        new Builder(baseName + "LoadTimes")
+            .setDescription("Time spent loading items into the cache in nanoseconds")
+            .setMetricType(MetricType.COUNTER).build(),
+        new Builder(baseName + "Misses")
+            .setDescription("Number of cache misses")
+            .setMetricType(MetricType.COUNTER).build(),
+        new Builder(baseName + "HitRate")
+            .setDescription("Ratio of cache hits to misses")
+            .setMetricType(MetricType.GAUGE).build());
+  }
+
   private static final String EXECUTOR_STRING = "%1$s.submitted is a meter of the tasks submitted"
       + " to the executor. %1$s.completed is a meter of the tasks completed by the executor."
       + " %1$s.activeTaskQueue is exponentially-decaying random reservoir of the number of"
@@ -289,11 +315,21 @@ public final class MetricKey implements Comparable<MetricKey> {
               + "from (parentId, childName) to childId.")
           .setMetricType(MetricType.GAUGE)
           .build();
+  public static final MetricKey MASTER_EDGE_CACHE_EVICTION_TIMER =
+      new Builder("Master.EdgeCacheEvictionTimer")
+          .setDescription("The time spent per eviction traversal in master edge cache")
+          .setMetricType(MetricType.GAUGE)
+          .build();
   public static final MetricKey MASTER_EDGE_CACHE_HITS =
       new Builder("Master.EdgeCacheHits")
           .setDescription("Total number of hits in the edge (inode metadata) cache. "
               + "The edge cache is responsible for managing the mapping "
               + "from (parentId, childName) to childId.")
+          .setMetricType(MetricType.GAUGE)
+          .build();
+  public static final MetricKey MASTER_EDGE_CACHE_HIT_RATIO =
+      new Builder("Master.EdgeCacheHitRatio")
+          .setDescription("Edge cache hit ratio.")
           .setMetricType(MetricType.GAUGE)
           .build();
   public static final MetricKey MASTER_EDGE_CACHE_LOAD_TIMES =
@@ -339,6 +375,11 @@ public final class MetricKey implements Comparable<MetricKey> {
       new Builder("Master.InodeCacheEvictions")
           .setDescription("Total number of inodes that was evicted from the cache.")
           .setMetricType(MetricType.GAUGE)
+          .build();
+  public static final MetricKey MASTER_INODE_CACHE_EVICTION_TIMER =
+      new Builder("Master.InodeCacheEvictionTimer")
+          .setDescription("The time spent per eviction traversal in master inode cache")
+          .setMetricType(MetricType.TIMER)
           .build();
   public static final MetricKey MASTER_INODE_CACHE_HITS =
       new Builder("Master.InodeCacheHits")
@@ -591,10 +632,20 @@ public final class MetricKey implements Comparable<MetricKey> {
           .setDescription("The total number of evictions in master listing cache")
           .setMetricType(MetricType.COUNTER)
           .build();
+  public static final MetricKey MASTER_LISTING_CACHE_EVICTION_TIMER =
+      new Builder("Master.ListingCacheEvictionTimer")
+          .setDescription("The time spent per eviction traversal in master listing cache")
+          .setMetricType(MetricType.TIMER)
+          .build();
   public static final MetricKey MASTER_LISTING_CACHE_HITS =
       new Builder("Master.ListingCacheHits")
           .setDescription("The total number of hits in master listing cache")
           .setMetricType(MetricType.COUNTER)
+          .build();
+  public static final MetricKey MASTER_LISTING_CACHE_HIT_RATIO =
+      new Builder("Master.ListingCacheHitRatio")
+          .setDescription("Listing cache hit ratio")
+          .setMetricType(MetricType.GAUGE)
           .build();
   public static final MetricKey MASTER_LISTING_CACHE_LOAD_TIMES =
       new Builder("Master.ListingCacheLoadTimes")
@@ -939,7 +990,7 @@ public final class MetricKey implements Comparable<MetricKey> {
           .setMetricType(MetricType.TIMER)
           .build();
   public static final MetricKey MASTER_STATE_LOCK_ACQUIRE_SHARED_TIMER =
-      new Builder("Master.StateLockAcquireStaredTimer")
+      new Builder("Master.StateLockAcquireSharedTimer")
           .setDescription(String.format("The time needed to acquire the state-lock in shared mode, "
                   + "or be interrupted before acquiring the lock."
                   + "Must be enabled by the property key %s.",

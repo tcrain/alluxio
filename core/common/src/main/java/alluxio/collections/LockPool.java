@@ -13,6 +13,7 @@ package alluxio.collections;
 
 import alluxio.Constants;
 import alluxio.concurrent.LockMode;
+import alluxio.metrics.StatsCounter;
 import alluxio.resource.LockResource;
 import alluxio.resource.RWLockResource;
 import alluxio.resource.RefCountLockResource;
@@ -21,6 +22,7 @@ import alluxio.util.ThreadFactoryUtils;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Stopwatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,6 +68,8 @@ public class LockPool<K> implements Closeable {
   private final Condition mOverHighWatermark = mEvictLock.newCondition();
   private final ExecutorService mEvictor;
   private final Future<?> mEvictorTask;
+  private final StatsCounter mStatsCounter;
+  private final String mName;
 
   /**
    * Constructor for a lock pool.
@@ -75,12 +79,17 @@ public class LockPool<K> implements Closeable {
    * @param lowWatermark low watermark of the pool size
    * @param highWatermark high watermark of the pool size
    * @param concurrencyLevel concurrency level of the pool
+   * @param statsCounter the stats counter
+   * @param name the name of the lock pool
    */
   public LockPool(Function<? super K, ? extends ReentrantReadWriteLock> defaultLoader,
-      int initialSize, int lowWatermark, int highWatermark, int concurrencyLevel) {
+      int initialSize, int lowWatermark, int highWatermark, int concurrencyLevel,
+      StatsCounter statsCounter, String name) {
     mDefaultLoader = defaultLoader;
     mLowWatermark = lowWatermark;
     mHighWatermark = highWatermark;
+    mStatsCounter = statsCounter;
+    mName = name;
     mPool = new ConcurrentHashMap<>(initialSize, DEFAULT_LOAD_FACTOR, concurrencyLevel);
     mEvictor = Executors.newSingleThreadExecutor(
         ThreadFactoryUtils.build(String.format("%s-%s", EVICTOR_THREAD_NAME, toString()), true));
@@ -148,12 +157,15 @@ public class LockPool<K> implements Closeable {
         while (mPool.size() <= mHighWatermark) {
           mOverHighWatermark.await(EVICTION_MAX_AWAIT_TIME, TimeUnit.MILLISECONDS);
         }
-        int numToEvict = mPool.size() - mLowWatermark;
+        int size = mPool.size();
+        int numToEvict = size - mLowWatermark;
         // The first round of scan uses the mIterator left from last eviction.
         // Then scan the pool from a new iterator for at most two round:
         // first round to mark candidate.mIsAccessed as false,
         // second round to remove the candidate from the pool.
         int roundToScan = 3;
+        int evicted = 0;
+        Stopwatch sw = Stopwatch.createStarted();
         while (numToEvict > 0 && roundToScan > 0) {
           if (!mIterator.hasNext()) {
             mIterator = mPool.entrySet().iterator();
@@ -166,10 +178,15 @@ public class LockPool<K> implements Closeable {
           } else {
             if (candidate.mRefCount.compareAndSet(0, Integer.MIN_VALUE)) {
               mIterator.remove();
+              evicted++;
               numToEvict--;
             }
           }
         }
+        long ns = sw.elapsed(TimeUnit.NANOSECONDS);
+        LOG.info("{}: Evicted {} entries in {}ms, start size {} current size {}", mName, evicted,
+            ns / Constants.MS_NANO, size, mPool.size());
+        mStatsCounter.recordEvictions(evicted, ns);
         if (mPool.size() >= mHighWatermark) {
           if (System.currentTimeMillis() - mLastSizeWarningTime
               > OVER_HIGH_WATERMARK_LOG_INTERVAL) {
@@ -253,9 +270,11 @@ public class LockPool<K> implements Closeable {
     Resource resource = mPool.compute(key, (k, v) -> {
       if (v != null && v.mRefCount.incrementAndGet() > 0) {
         // If the entry is to be removed, ref count will be INT_MIN, so incrementAndGet will < 0.
+        mStatsCounter.recordHit();
         v.mIsAccessed = true;
         return v;
       }
+      mStatsCounter.recordMiss();
       return new Resource(mDefaultLoader.apply(k));
     });
     if (mPool.size() > mHighWatermark) {
@@ -276,6 +295,7 @@ public class LockPool<K> implements Closeable {
         .add("lowWatermark", mLowWatermark)
         .add("highWatermark", mHighWatermark)
         .add("size", mPool.size())
+        .add("name", mName)
         .toString();
   }
 

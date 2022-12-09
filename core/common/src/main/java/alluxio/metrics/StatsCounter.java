@@ -9,32 +9,41 @@
  * See the NOTICE file distributed with this work for information regarding copyright ownership.
  */
 
-package alluxio.master.metastore.caching;
-
-import static alluxio.metrics.MetricKey.MASTER_INODE_CACHE_HIT_RATIO;
-
-import alluxio.metrics.MetricKey;
-import alluxio.metrics.MetricsSystem;
+package alluxio.metrics;
 
 import com.codahale.metrics.Counter;
+
+import java.util.concurrent.TimeUnit;
 
 /**
  * Implementation of StatsCounter similar to the one in
  * {@link com.google.common.cache.AbstractCache}.
  */
-final class StatsCounter {
+public final class StatsCounter {
   private final Counter mHitCount;
   private final Counter mMissCount;
   private final Counter mTotalLoadTime;
   private final Counter mEvictionCount;
+  private final MetricKey mEvictionTimer;
 
-  public StatsCounter(MetricKey evictionsKey, MetricKey hitsKey, MetricKey loadTimesKey,
-                      MetricKey missesKey) {
+  /**
+   * Creates a new {@link StatsCounter} instance.
+   * @param evictionTimerKey metric key for the eviction timer
+   * @param evictionsKey metrics key for the eviction counter
+   * @param hitsKey metrics key for the cache hits
+   * @param loadTimesKey metrics key the time to load keys
+   * @param missesKey metrics key for the cache misses
+   * @param hitRatioKey metrics key for the hit to miss ratio
+   */
+  public StatsCounter(MetricKey evictionTimerKey, MetricKey evictionsKey,
+      MetricKey hitsKey, MetricKey loadTimesKey, MetricKey missesKey,
+      MetricKey hitRatioKey) {
     mHitCount = MetricsSystem.counter(hitsKey.getName());
     mMissCount = MetricsSystem.counter(missesKey.getName());
     mTotalLoadTime = MetricsSystem.counter(loadTimesKey.getName());
     mEvictionCount = MetricsSystem.counter(evictionsKey.getName());
-    MetricsSystem.registerGaugeIfAbsent(MASTER_INODE_CACHE_HIT_RATIO.getName(),
+    mEvictionTimer = evictionTimerKey;
+    MetricsSystem.registerGaugeIfAbsent(hitRatioKey.getName(),
         () -> mHitCount.getCount() * 1.0
             / (mHitCount.getCount() + mMissCount.getCount()));
   }
@@ -64,8 +73,10 @@ final class StatsCounter {
   /**
    * Record evictions in the cache.
    * @param evictionCount the number of evictions
+   * @param evictionTimeNanos time to perform the eviction traversal in nanoseconds
    */
-  public void recordEvictions(long evictionCount) {
+  public void recordEvictions(long evictionCount, long evictionTimeNanos) {
     mEvictionCount.inc(evictionCount);
+    MetricsSystem.timer(mEvictionTimer.getName()).update(evictionTimeNanos, TimeUnit.NANOSECONDS);
   }
 }

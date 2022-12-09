@@ -15,6 +15,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import alluxio.concurrent.LockMode;
+import alluxio.metrics.MetricKey;
+import alluxio.metrics.StatsCounter;
 import alluxio.resource.LockResource;
 import alluxio.util.CommonUtils;
 
@@ -31,13 +33,15 @@ public class LockPoolTest {
   private LockPool<Integer> mPool;
   private static final int LOW_WATERMARK = 8;
   private static final int HIGH_WATERMARK = 16;
+  private static final StatsCounter STATS_COUNTER = MetricKey.generateStatsCounter("testPool");
 
   /**
    * Sets up the fields before running a test.
    */
   @Before
   public void before() {
-    mPool = new LockPool<>(k -> new ReentrantReadWriteLock(), 2, LOW_WATERMARK, HIGH_WATERMARK, 4);
+    mPool = new LockPool<>(k -> new ReentrantReadWriteLock(), 2,
+        LOW_WATERMARK, HIGH_WATERMARK, 4, STATS_COUNTER, "testPool");
   }
 
   @After

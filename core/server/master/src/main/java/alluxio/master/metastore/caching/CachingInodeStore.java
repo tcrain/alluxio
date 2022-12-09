@@ -34,6 +34,7 @@ import alluxio.master.metastore.ReadOption;
 import alluxio.master.metastore.heap.HeapInodeStore;
 import alluxio.metrics.MetricKey;
 import alluxio.metrics.MetricsSystem;
+import alluxio.metrics.StatsCounter;
 import alluxio.resource.CloseableIterator;
 import alluxio.resource.LockResource;
 import alluxio.resource.RWLockResource;
@@ -294,9 +295,10 @@ public final class CachingInodeStore implements InodeStore, Closeable {
   @VisibleForTesting
   class InodeCache extends Cache<Long, MutableInode<?>> {
     public InodeCache(CacheConfiguration conf) {
-      super(conf, "inode-cache", MetricKey.MASTER_INODE_CACHE_EVICTIONS,
-          MetricKey.MASTER_INODE_CACHE_HITS, MetricKey.MASTER_INODE_CACHE_LOAD_TIMES,
-          MetricKey.MASTER_INODE_CACHE_MISSES, MetricKey.MASTER_INODE_CACHE_SIZE);
+      super(conf, "inode-cache", MetricKey.MASTER_INODE_CACHE_EVICTION_TIMER,
+          MetricKey.MASTER_INODE_CACHE_EVICTIONS, MetricKey.MASTER_INODE_CACHE_HITS,
+          MetricKey.MASTER_INODE_CACHE_LOAD_TIMES, MetricKey.MASTER_INODE_CACHE_MISSES,
+          MetricKey.MASTER_INODE_CACHE_SIZE, MetricKey.MASTER_INODE_CACHE_HIT_RATIO);
     }
 
     @Override
@@ -388,9 +390,10 @@ public final class CachingInodeStore implements InodeStore, Closeable {
     Map<Long, Set<String>> mUnflushedDeletes = new ConcurrentHashMap<>();
 
     public EdgeCache(CacheConfiguration conf) {
-      super(conf, "edge-cache", MetricKey.MASTER_EDGE_CACHE_EVICTIONS,
-          MetricKey.MASTER_EDGE_CACHE_HITS, MetricKey.MASTER_EDGE_CACHE_LOAD_TIMES,
-          MetricKey.MASTER_EDGE_CACHE_MISSES, MetricKey.MASTER_EDGE_CACHE_SIZE);
+      super(conf, "edge-cache", MetricKey.MASTER_EDGE_CACHE_EVICTION_TIMER,
+          MetricKey.MASTER_EDGE_CACHE_EVICTIONS, MetricKey.MASTER_EDGE_CACHE_HITS,
+          MetricKey.MASTER_EDGE_CACHE_LOAD_TIMES, MetricKey.MASTER_EDGE_CACHE_MISSES,
+          MetricKey.MASTER_EDGE_CACHE_SIZE, MetricKey.MASTER_EDGE_CACHE_HIT_RATIO);
     }
 
     /**
@@ -628,10 +631,12 @@ public final class CachingInodeStore implements InodeStore, Closeable {
       mLowWaterMark = conf.getLowWaterMark();
 
       mStatsCounter = new StatsCounter(
+          MetricKey.MASTER_LISTING_CACHE_EVICTION_TIMER,
           MetricKey.MASTER_LISTING_CACHE_EVICTIONS,
           MetricKey.MASTER_LISTING_CACHE_HITS,
           MetricKey.MASTER_LISTING_CACHE_LOAD_TIMES,
-          MetricKey.MASTER_LISTING_CACHE_MISSES);
+          MetricKey.MASTER_LISTING_CACHE_MISSES,
+          MetricKey.MASTER_LISTING_CACHE_HIT_RATIO);
       MetricsSystem.registerGaugeIfAbsent(MetricKey.MASTER_LISTING_CACHE_SIZE.getName(),
           mWeight::get);
     }

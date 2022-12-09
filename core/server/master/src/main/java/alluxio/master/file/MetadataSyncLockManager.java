@@ -17,6 +17,8 @@ import alluxio.concurrent.LockMode;
 import alluxio.conf.Configuration;
 import alluxio.conf.PropertyKey;
 import alluxio.exception.InvalidPathException;
+import alluxio.metrics.MetricKey;
+import alluxio.metrics.StatsCounter;
 import alluxio.resource.LockResource;
 import alluxio.util.io.PathUtils;
 
@@ -33,6 +35,9 @@ import javax.annotation.concurrent.NotThreadSafe;
  * Class for managing metadata sync locking.
  */
 public class MetadataSyncLockManager {
+
+  private static final StatsCounter STATS_COUNTER = MetricKey.generateStatsCounter(
+      "Master.LockPoolMetadataSync");
   /**
    * Pool for supplying metadata sync locks.
    *
@@ -44,7 +49,8 @@ public class MetadataSyncLockManager {
           Configuration.getInt(PropertyKey.MASTER_METADATA_SYNC_LOCK_POOL_INITSIZE),
           Configuration.getInt(PropertyKey.MASTER_METADATA_SYNC_LOCK_POOL_LOW_WATERMARK),
           Configuration.getInt(PropertyKey.MASTER_METADATA_SYNC_LOCK_POOL_HIGH_WATERMARK),
-          Configuration.getInt(PropertyKey.MASTER_METADATA_SYNC_LOCK_POOL_CONCURRENCY_LEVEL));
+          Configuration.getInt(PropertyKey.MASTER_METADATA_SYNC_LOCK_POOL_CONCURRENCY_LEVEL),
+          STATS_COUNTER, "MetadataSync");
 
   /**
    * Acquire locks for a given path before metadata sync.

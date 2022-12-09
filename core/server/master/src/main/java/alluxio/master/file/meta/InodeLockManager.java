@@ -17,6 +17,7 @@ import alluxio.conf.Configuration;
 import alluxio.conf.PropertyKey;
 import alluxio.metrics.MetricKey;
 import alluxio.metrics.MetricsSystem;
+import alluxio.metrics.StatsCounter;
 import alluxio.resource.LockResource;
 import alluxio.resource.RWLockResource;
 import alluxio.util.interfaces.Scoped;
@@ -41,6 +42,10 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * use. As a result, we save memory when the inode tree contains many millions of files.
  */
 public class InodeLockManager implements Closeable {
+  private static final StatsCounter INODE_STATS = MetricKey.generateStatsCounter(
+      "Master.LockPoolInode");
+  private static final StatsCounter EDGE_STATS = MetricKey.generateStatsCounter(
+      "Master.LockPoolEdge");
   /**
    * Pool for supplying inode locks. To lock an inode, its inode id must be searched in this
    * pool to get the appropriate read lock.
@@ -53,7 +58,8 @@ public class InodeLockManager implements Closeable {
           Configuration.getInt(PropertyKey.MASTER_LOCK_POOL_INITSIZE),
           Configuration.getInt(PropertyKey.MASTER_LOCK_POOL_LOW_WATERMARK),
           Configuration.getInt(PropertyKey.MASTER_LOCK_POOL_HIGH_WATERMARK),
-          Configuration.getInt(PropertyKey.MASTER_LOCK_POOL_CONCURRENCY_LEVEL));
+          Configuration.getInt(PropertyKey.MASTER_LOCK_POOL_CONCURRENCY_LEVEL),
+          INODE_STATS, "Inode");
   /**
    * Cache for supplying edge locks, similar to mInodeLocks.
    */
@@ -62,7 +68,8 @@ public class InodeLockManager implements Closeable {
           Configuration.getInt(PropertyKey.MASTER_LOCK_POOL_INITSIZE),
           Configuration.getInt(PropertyKey.MASTER_LOCK_POOL_LOW_WATERMARK),
           Configuration.getInt(PropertyKey.MASTER_LOCK_POOL_HIGH_WATERMARK),
-          Configuration.getInt(PropertyKey.MASTER_LOCK_POOL_CONCURRENCY_LEVEL));
+          Configuration.getInt(PropertyKey.MASTER_LOCK_POOL_CONCURRENCY_LEVEL),
+          EDGE_STATS, "Edge");
 
   /**
    * Locks for guarding changes to last modified time and size on read-locked parent inodes.

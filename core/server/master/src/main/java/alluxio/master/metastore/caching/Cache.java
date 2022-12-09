@@ -15,6 +15,7 @@ import alluxio.Constants;
 import alluxio.master.metastore.ReadOption;
 import alluxio.metrics.MetricKey;
 import alluxio.metrics.MetricsSystem;
+import alluxio.metrics.StatsCounter;
 import alluxio.util.logging.SamplingLogger;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -76,14 +77,17 @@ public abstract class Cache<K, V> implements Closeable {
   /**
    * @param conf cache configuration
    * @param name a name for the cache
+   * @param evictionTimer the cache evictions timer metric key
    * @param evictionsKey the cache evictions metric key
    * @param hitsKey the cache hits metrics key
    * @param loadTimesKey the load times metrics key
    * @param missesKey the misses metrics key
    * @param sizeKey the size metrics key
+   * @param hitRatioKey the hit ratio key
    */
-  public Cache(CacheConfiguration conf, String name, MetricKey evictionsKey, MetricKey hitsKey,
-               MetricKey loadTimesKey, MetricKey missesKey, MetricKey sizeKey) {
+  public Cache(CacheConfiguration conf, String name, MetricKey evictionTimer,
+      MetricKey evictionsKey, MetricKey hitsKey, MetricKey loadTimesKey,
+      MetricKey missesKey, MetricKey sizeKey, MetricKey hitRatioKey) {
     mMaxSize = conf.getMaxSize();
     mHighWaterMark = conf.getHighWaterMark();
     mLowWaterMark = conf.getLowWaterMark();
@@ -93,7 +97,8 @@ public abstract class Cache<K, V> implements Closeable {
     mEvictionThread = new EvictionThread();
     mEvictionThread.setDaemon(true);
     // The eviction thread is started lazily when we first reach the high water mark.
-    mStatsCounter = new StatsCounter(evictionsKey, hitsKey, loadTimesKey, missesKey);
+    mStatsCounter = new StatsCounter(evictionTimer, evictionsKey, hitsKey, loadTimesKey, missesKey,
+        hitRatioKey);
 
     MetricsSystem.registerGaugeIfAbsent(sizeKey.getName(), mMap::size);
   }
@@ -345,7 +350,8 @@ public abstract class Cache<K, V> implements Closeable {
 
     private void evictToLowWaterMark() {
       long evictionStart = System.nanoTime();
-      int toEvict = mMap.size() - mLowWaterMark;
+      int size = mMap.size();
+      int toEvict = size - mLowWaterMark;
       int evictionCount = 0;
       while (evictionCount < toEvict) {
         if (!mEvictionHead.hasNext()) {
@@ -354,11 +360,10 @@ public abstract class Cache<K, V> implements Closeable {
         fillBatch(toEvict - evictionCount);
         evictionCount += evictBatch();
       }
-      if (evictionCount > 0) {
-        mStatsCounter.recordEvictions(evictionCount);
-        LOG.info("{}: Evicted {} entries in {}ms", mName, evictionCount,
-            (System.nanoTime() - evictionStart) / Constants.MS_NANO);
-      }
+      long ns = System.nanoTime() - evictionStart;
+      mStatsCounter.recordEvictions(evictionCount, ns);
+      LOG.info("{}: Evicted {} entries in {}ms, start size {}, current size {}", mName,
+          evictionCount, ns / Constants.MS_NANO, size, mMap.size());
     }
 
     /**

@@ -81,7 +81,7 @@ public final class MasterJournalContext implements JournalContext {
     }
 
     Timer.Context timer = MetricsSystem
-        .timer(MetricKey.MASTER_JOURNAL_FLUSH_TIMER.getName()).time();
+        .timer(MetricKey.MASTER_JOURNAL_OPERATION_FLUSH_TIMER.getName()).time();
     RetryPolicy retry = new TimeoutRetry(FLUSH_RETRY_TIMEOUT_MS, FLUSH_RETRY_INTERVAL_MS);
     while (retry.attempt()) {
       try {
