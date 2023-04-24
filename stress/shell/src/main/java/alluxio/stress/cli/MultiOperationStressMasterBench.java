@@ -260,22 +260,22 @@ public class MultiOperationStressMasterBench
       getContext() throws IOException, AlluxioException {
     final BenchContext benchContext;
     if (mParameters.mTargetThroughputs == null) {
-      RateLimiter[] rateLimiters = new RateLimiter[mParameters.mOperations.length];
+      BasicRateLimit[] rateLimiters = new BasicRateLimit[mParameters.mOperations.length];
       for (int i = 0; i < mParameters.mOperations.length; i++) {
-        rateLimiters[i] = createUnlimitedRateLimiter();
+        rateLimiters[i] = createRateLimiter(0);
       }
       benchContext = new BenchContext(
-          createUnlimitedRateLimiter(), rateLimiters,
+          createRateLimiter(0), rateLimiters,
           mParameters.mOperations, mParameters.mBasePaths, mParameters.mDuration);
     } else {
       int sum = 0;
-      RateLimiter[] rateLimiters = new RateLimiter[mParameters.mOperations.length];
+      BasicRateLimit[] rateLimiters = new BasicRateLimit[mParameters.mOperations.length];
       for (int i = 0; i < mParameters.mTargetThroughputs.length; i++) {
-        rateLimiters[i] = RateLimiter.create(mParameters.mTargetThroughputs[i]);
+        rateLimiters[i] = createRateLimiter(mParameters.mTargetThroughputs[i]);
         sum += mParameters.mTargetThroughputs[i];
       }
       benchContext = new BenchContext(
-          RateLimiter.create(sum), rateLimiters, mParameters.mOperations, mParameters.mBasePaths,
+          createRateLimiter(sum), rateLimiters, mParameters.mOperations, mParameters.mBasePaths,
           mParameters.mDuration);
     }
     return benchContext;
@@ -455,7 +455,7 @@ public class MultiOperationStressMasterBench
 
     @SuppressFBWarnings("BC_UNCONFIRMED_CAST")
     private void runInternalTargetThroughputBased() throws Exception {
-      RateLimiter[] rls = mContext.getRateLimiters();
+      BasicRateLimit[] rls = mContext.getRateLimiters();
       // Each run picks the next available operation with the following 2 constraints:
       // 1. the overall throughput should not exceed the user specified limit
       // 2. the throughput of the operation to execute should not exceed the user specified limit,

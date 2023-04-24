@@ -67,6 +67,35 @@ public abstract class StressMasterBenchBase
     extends AbstractStressBench<T, P> {
   private static final Logger LOG = LoggerFactory.getLogger(StressMasterBenchBase.class);
 
+  public BasicRateLimit createRateLimiter(long opsPerSec) {
+    if (opsPerSec == 0) {
+      return new BasicRateLimit() {
+        @Override
+        public double acquire() {
+          return 0;
+        }
+
+        @Override
+        public boolean tryAcquire() {
+          return true;
+        }
+      };
+    } else {
+      RateLimiter limiter = RateLimiter.create(opsPerSec);
+      return new BasicRateLimit() {
+        @Override
+        public double acquire() {
+          return limiter.acquire();
+        }
+
+        @Override
+        public boolean tryAcquire() {
+          return limiter.tryAcquire();
+        }
+      };
+    }
+  }
+
   protected byte[] mFiledata;
 
   /** Cached FS instances. */
@@ -211,8 +240,8 @@ public abstract class StressMasterBenchBase
   protected abstract Callable<Void> getBenchThread(BenchContext context, int index);
 
   protected final class BenchContext {
-    private final RateLimiter mGrandRateLimiter;
-    private final RateLimiter[] mOperationRateLimiters;
+    private final BasicRateLimit mGrandRateLimiter;
+    private final BasicRateLimit[] mOperationRateLimiters;
     private final long mStartMs;
     private final long mEndMs;
     private final AtomicLong[] mOperationCounters;
@@ -224,7 +253,7 @@ public abstract class StressMasterBenchBase
 
     @SuppressFBWarnings("BC_UNCONFIRMED_CAST")
     BenchContext(
-        RateLimiter grandRateLimiter, RateLimiter[] rateLimiters,
+        BasicRateLimit grandRateLimiter, BasicRateLimit[] rateLimiters,
         Operation[] operations, String[] basePaths, String duration) {
       mGrandRateLimiter = grandRateLimiter;
       mOperationRateLimiters = rateLimiters;
@@ -272,20 +301,20 @@ public abstract class StressMasterBenchBase
     }
 
     @SuppressFBWarnings("BC_UNCONFIRMED_CAST")
-    public BenchContext(RateLimiter rateLimiter, Operation operation, String duration) {
-      this(rateLimiter, new RateLimiter[]{rateLimiter},
+    public BenchContext(BasicRateLimit rateLimiter, Operation operation, String duration) {
+      this(rateLimiter, new BasicRateLimit[]{rateLimiter},
           new Operation[]{operation}, new String[]{mParameters.mBasePath}, duration);
     }
 
-    public RateLimiter[] getRateLimiters() {
+    public BasicRateLimit[] getRateLimiters() {
       return mOperationRateLimiters;
     }
 
-    public RateLimiter getGrandRateLimiter() {
+    public BasicRateLimit getGrandRateLimiter() {
       return mGrandRateLimiter;
     }
 
-    public RateLimiter getRateLimiter(int index) {
+    public BasicRateLimit getRateLimiter(int index) {
       return mOperationRateLimiters[index];
     }
 
