@@ -71,7 +71,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import org.apache.commons.collections4.iterators.PeekingIterator;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.PeekingIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -355,9 +356,9 @@ public class DefaultSyncProcess implements SyncProcess {
           return item;
         });
 
-        PeekingIterator<UfsItem> ufsIterator = new PeekingIterator<>(stream.iterator());
+        PeekingIterator<UfsItem> ufsIterator = Iterators.peekingIterator(stream.iterator());
         // Check if the root of the path being synced is a file
-        UfsItem firstItem = ufsIterator.peek();
+        UfsItem firstItem = ufsIterator.hasNext() ? ufsIterator.peek() : null;
         boolean baseSyncPathIsFile = firstItem != null && firstItem.mUfsItem.isFile()
             && PathUtils.normalizePathStart(firstItem.mUfsItem.getName(), AlluxioURI.SEPARATOR)
             .equals(loadResult.getBaseLoadPath().getPath());

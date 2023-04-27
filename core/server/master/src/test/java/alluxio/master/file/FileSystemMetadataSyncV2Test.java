@@ -37,6 +37,9 @@ import alluxio.master.file.mdsync.SyncFailReason;
 import alluxio.master.file.mdsync.SyncOperation;
 import alluxio.master.file.mdsync.TaskStats;
 import alluxio.master.file.mdsync.TestSyncProcessor;
+import alluxio.resource.CloseableResource;
+import alluxio.underfs.UfsClient;
+import alluxio.underfs.UnderFileSystem;
 import alluxio.util.CommonUtils;
 import alluxio.wire.FileInfo;
 
@@ -72,6 +75,24 @@ public class FileSystemMetadataSyncV2Test extends MetadataSyncV2TestBase {
 
   public FileSystemMetadataSyncV2Test(DirectoryLoadType directoryLoadType) {
     mDirectoryLoadType = directoryLoadType;
+  }
+
+  @Test
+  public void asyncListingOperations() throws Exception {
+    mFileSystemMaster.mount(MOUNT_POINT, UFS_ROOT, MountContext.defaults());
+    mS3Client.putObject(TEST_BUCKET, TEST_DIRECTORY + "/" + TEST_FILE, TEST_CONTENT);
+
+    try (CloseableResource<UnderFileSystem> ufsClient = mFileSystemMaster.getMountTable()
+        .getUfsClient(mFileSystemMaster.getMountTable().getMountInfo(MOUNT_POINT)
+            .getMountId()).acquireUfsResource()) {
+      UfsClient cli = ufsClient.get();
+      cli.performListingAsync("/", null, null, DescendantType.NONE, true,
+          ufsResult -> {
+            System.out.println(ufsResult.getItems().collect(Collectors.toList()));
+          }, t -> {
+            System.out.println(t);
+          });
+    }
   }
 
   @Test
