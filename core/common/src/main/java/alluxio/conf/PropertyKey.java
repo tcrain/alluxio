@@ -2676,6 +2676,16 @@ public final class PropertyKey implements Comparable<PropertyKey> {
           .setConsistencyCheckLevel(ConsistencyCheckLevel.ENFORCE)
           .setScope(Scope.MASTER)
           .build();
+  public static final PropertyKey MASTER_METASTORE_INODE_CACHE_BASIC =
+      booleanBuilder(Name.MASTER_METASTORE_INODE_CACHE_BASIC)
+          .setDefaultValue(false)
+          .setDescription("If true a basic cache is used that only caches inodes "
+              + "with edges being accessed from RocksDB directly. "
+              + "This cache is recommended when using a master with limited memory "
+              + "or when individual directories contain large numbers of files.")
+          .setConsistencyCheckLevel(ConsistencyCheckLevel.ENFORCE)
+          .setScope(Scope.MASTER)
+          .build();
   // 2k bytes per inode cache key and * 2 for the existence of edge cache and some leeway
   public static final PropertyKey MASTER_METASTORE_INODE_CACHE_MAX_SIZE =
       intBuilder(Name.MASTER_METASTORE_INODE_CACHE_MAX_SIZE)
@@ -3319,6 +3329,32 @@ public final class PropertyKey implements Comparable<PropertyKey> {
       .setConsistencyCheckLevel(ConsistencyCheckLevel.ENFORCE)
       .setScope(Scope.MASTER)
       .build();
+  public static final PropertyKey MASTER_PROXY_TIMEOUT_MS =
+      durationBuilder(Name.MASTER_PROXY_TIMEOUT_MS)
+          .setAlias("alluxio.master.proxy.timeout.ms")
+          .setDefaultValue("5m")
+          .setDescription("An Alluxio Proxy instance will maintain heartbeat to the primary "
+              + "Alluxio Master. No heartbeat more than this timeout indicates a lost Proxy.")
+          .setConsistencyCheckLevel(ConsistencyCheckLevel.WARN)
+          .setScope(Scope.MASTER)
+          .build();
+  public static final PropertyKey MASTER_PROXY_CHECK_HEARTBEAT_INTERVAL =
+      durationBuilder(Name.MASTER_PROXY_CHECK_HEARTBEAT_INTERVAL)
+          .setDefaultValue("1min")
+          .setDescription("The master will periodically check the last heartbeat time from all "
+              + "Proxy instances. This key specifies the frequency of the check.")
+          .setConsistencyCheckLevel(ConsistencyCheckLevel.WARN)
+          .setScope(Scope.MASTER)
+          .build();
+  public static final PropertyKey MASTER_LOST_PROXY_DELETION_TIMEOUT_MS =
+      durationBuilder(Name.MASTER_LOST_PROXY_DELETION_TIMEOUT_MS)
+          .setAlias("alluxio.master.lost.proxy.deletion.timeout.ms")
+          .setDefaultValue("30min")
+          .setDescription("If an Alluxio Proxy has been lost for more than this timeout, "
+              + "the master will totally forget this worker.")
+          .setConsistencyCheckLevel(ConsistencyCheckLevel.WARN)
+          .setScope(Scope.MASTER)
+          .build();
   public static final PropertyKey MASTER_RPC_PORT =
       intBuilder(Name.MASTER_RPC_PORT)
           .setAlias("alluxio.master.port")
@@ -5268,6 +5304,15 @@ public final class PropertyKey implements Comparable<PropertyKey> {
   //
   // Proxy related properties
   //
+  public static final PropertyKey PROXY_MASTER_HEARTBEAT_INTERVAL =
+      durationBuilder(Name.PROXY_MASTER_HEARTBEAT_INTERVAL)
+          .setAlias("alluxio.proxy.master.heartbeat.interval.ms")
+          .setDefaultValue("10sec")
+          .setDescription("Proxy instances maintain a heartbeat with the primary master. "
+                + "This key specifies the heartbeat interval.")
+          .setConsistencyCheckLevel(ConsistencyCheckLevel.WARN)
+          .setScope(Scope.SERVER)
+          .build();
   public static final PropertyKey PROXY_S3_WRITE_TYPE =
       enumBuilder(Name.PROXY_S3_WRITE_TYPE, WriteType.class)
           .setDefaultValue(WriteType.CACHE_THROUGH)
@@ -7285,6 +7330,20 @@ public final class PropertyKey implements Comparable<PropertyKey> {
           .setDefaultValue(100000)
           .setScope(Scope.MASTER)
           .build();
+  public static final PropertyKey JOB_MASTER_MASTER_HEARTBEAT_INTERVAL =
+      durationBuilder(Name.JOB_MASTER_MASTER_HEARTBEAT_INTERVAL)
+          .setDescription("The amount of time that a standby Alluxio Job Master should wait "
+              + "in between heartbeats to the primary Job Master.")
+          .setDefaultValue("1sec")
+          .setScope(Scope.MASTER)
+          .build();
+  public static final PropertyKey JOB_MASTER_MASTER_TIMEOUT =
+      durationBuilder(Name.JOB_MASTER_MASTER_TIMEOUT)
+          .setDescription("The time period after which the primary Job Master will mark a standby "
+              + "as lost without a subsequent heartbeat.")
+          .setDefaultValue("60sec")
+          .setScope(Scope.MASTER)
+          .build();
   public static final PropertyKey JOB_MASTER_WORKER_HEARTBEAT_INTERVAL =
       durationBuilder(Name.JOB_MASTER_WORKER_HEARTBEAT_INTERVAL)
           .setDescription("The amount of time that the Alluxio job worker should wait in between "
@@ -7310,6 +7369,13 @@ public final class PropertyKey implements Comparable<PropertyKey> {
           .setDescription("The hostname of the Alluxio job master.")
           .setDefaultValue(format("${%s}", Name.MASTER_HOSTNAME))
           .setScope(Scope.ALL)
+          .build();
+  public static final PropertyKey JOB_MASTER_LOST_MASTER_INTERVAL =
+      durationBuilder(Name.JOB_MASTER_LOST_MASTER_INTERVAL)
+          .setDescription("The time interval the job master waits between checks for "
+              + "lost job masters.")
+          .setDefaultValue("10sec")
+          .setScope(Scope.MASTER)
           .build();
   public static final PropertyKey JOB_MASTER_LOST_WORKER_INTERVAL =
       durationBuilder(Name.JOB_MASTER_LOST_WORKER_INTERVAL)
@@ -8013,6 +8079,8 @@ public final class PropertyKey implements Comparable<PropertyKey> {
         "alluxio.master.lock.pool.high.watermark";
     public static final String MASTER_LOCK_POOL_CONCURRENCY_LEVEL =
         "alluxio.master.lock.pool.concurrency.level";
+    public static final String MASTER_LOST_PROXY_DELETION_TIMEOUT_MS =
+        "alluxio.master.lost.proxy.deletion.timeout";
     public static final String MASTER_JOURNAL_CATCHUP_PROTECT_ENABLED =
         "alluxio.master.journal.catchup.protect.enabled";
     public static final String MASTER_JOURNAL_EXIT_ON_DEMOTION =
@@ -8154,6 +8222,8 @@ public final class PropertyKey implements Comparable<PropertyKey> {
         "alluxio.master.metastore.inode.cache.high.water.mark.ratio";
     public static final String MASTER_METASTORE_INODE_CACHE_LOW_WATER_MARK_RATIO =
         "alluxio.master.metastore.inode.cache.low.water.mark.ratio";
+    public static final String MASTER_METASTORE_INODE_CACHE_BASIC =
+        "alluxio.master.metastore.inode.cache.basic";
     public static final String MASTER_METASTORE_INODE_CACHE_MAX_SIZE =
         "alluxio.master.metastore.inode.cache.max.size";
     public static final String MASTER_METASTORE_INODE_ITERATION_CRAWLER_COUNT =
@@ -8239,6 +8309,9 @@ public final class PropertyKey implements Comparable<PropertyKey> {
     public static final String MASTER_PERIODIC_BLOCK_INTEGRITY_CHECK_INTERVAL =
         "alluxio.master.periodic.block.integrity.check.interval";
     public static final String MASTER_PRINCIPAL = "alluxio.master.principal";
+    public static final String MASTER_PROXY_TIMEOUT_MS = "alluxio.master.proxy.timeout";
+    public static final String MASTER_PROXY_CHECK_HEARTBEAT_INTERVAL =
+        "alluxio.master.proxy.check.heartbeat.timeout";
     public static final String MASTER_REPLICATION_CHECK_INTERVAL_MS =
         "alluxio.master.replication.check.interval";
     public static final String MASTER_RPC_PORT = "alluxio.master.rpc.port";
@@ -8629,6 +8702,8 @@ public final class PropertyKey implements Comparable<PropertyKey> {
     //
     // Proxy related properties
     //
+    public static final String PROXY_MASTER_HEARTBEAT_INTERVAL =
+        "alluxio.proxy.master.heartbeat.interval";
     public static final String PROXY_S3_WRITE_TYPE = "alluxio.proxy.s3.writetype";
     public static final String PROXY_S3_DELETE_TYPE = "alluxio.proxy.s3.deletetype";
     public static final String PROXY_S3_MULTIPART_UPLOAD_CLEANER_ENABLED =
@@ -9074,6 +9149,10 @@ public final class PropertyKey implements Comparable<PropertyKey> {
     public static final String JOB_MASTER_FINISHED_JOB_RETENTION_TIME =
         "alluxio.job.master.finished.job.retention.time";
     public static final String JOB_MASTER_JOB_CAPACITY = "alluxio.job.master.job.capacity";
+    public static final String JOB_MASTER_MASTER_HEARTBEAT_INTERVAL =
+        "alluxio.job.master.master.heartbeat.interval";
+    public static final String JOB_MASTER_MASTER_TIMEOUT =
+        "alluxio.job.master.master.timeout";
     public static final String JOB_MASTER_WORKER_HEARTBEAT_INTERVAL =
         "alluxio.job.master.worker.heartbeat.interval";
     public static final String JOB_MASTER_WORKER_TIMEOUT =
@@ -9081,6 +9160,8 @@ public final class PropertyKey implements Comparable<PropertyKey> {
 
     public static final String JOB_MASTER_BIND_HOST = "alluxio.job.master.bind.host";
     public static final String JOB_MASTER_HOSTNAME = "alluxio.job.master.hostname";
+    public static final String JOB_MASTER_LOST_MASTER_INTERVAL =
+            "alluxio.job.master.lost.master.interval";
     public static final String JOB_MASTER_LOST_WORKER_INTERVAL =
         "alluxio.job.master.lost.worker.interval";
     public static final String JOB_MASTER_RPC_PORT = "alluxio.job.master.rpc.port";
