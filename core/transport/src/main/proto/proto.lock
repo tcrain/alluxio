@@ -1507,6 +1507,26 @@
       "def": {
         "enums": [
           {
+            "name": "PersistenceState",
+            "enum_fields": [
+              {
+                "name": "NOT_PERSISTED"
+              },
+              {
+                "name": "TO_BE_PERSISTED",
+                "integer": 1
+              },
+              {
+                "name": "PERSISTED",
+                "integer": 2
+              },
+              {
+                "name": "LOST",
+                "integer": 3
+              }
+            ]
+          },
+          {
             "name": "Bits",
             "enum_fields": [
               {
@@ -3127,7 +3147,13 @@
               {
                 "id": 19,
                 "name": "persistenceState",
-                "type": "string"
+                "type": "string",
+                "options": [
+                  {
+                    "name": "deprecated",
+                    "value": "true"
+                  }
+                ]
               },
               {
                 "id": 20,
@@ -3195,6 +3221,11 @@
                 "name": "mediumType",
                 "type": "string",
                 "is_repeated": true
+              },
+              {
+                "id": 34,
+                "name": "persistenceStateEnum",
+                "type": "PersistenceState"
               }
             ],
             "maps": [
@@ -9613,7 +9644,13 @@
               {
                 "id": 4,
                 "name": "persistence_state",
-                "type": "string"
+                "type": "string",
+                "options": [
+                  {
+                    "name": "deprecated",
+                    "value": "true"
+                  }
+                ]
               },
               {
                 "id": 5,
@@ -9669,7 +9706,13 @@
               {
                 "id": 14,
                 "name": "acl",
-                "type": "alluxio.proto.shared.AccessControlList"
+                "type": "alluxio.proto.shared.AccessControlList",
+                "options": [
+                  {
+                    "name": "deprecated",
+                    "value": "true"
+                  }
+                ]
               },
               {
                 "id": 15,
@@ -9702,6 +9745,16 @@
                     "value": "TRUNCATE"
                   }
                 ]
+              },
+              {
+                "id": 21,
+                "name": "persistence_state_enum",
+                "type": "grpc.PersistenceState"
+              },
+              {
+                "id": 22,
+                "name": "new_acl",
+                "type": "alluxio.proto.shared.NewAccessControlList"
               }
             ],
             "maps": [
@@ -9737,6 +9790,11 @@
                 "id": 4,
                 "name": "defaultAcl",
                 "type": "alluxio.proto.shared.AccessControlList"
+              },
+              {
+                "id": 5,
+                "name": "newDefaultAcl",
+                "type": "alluxio.proto.shared.NewAccessControlList"
               }
             ]
           },
@@ -9883,12 +9941,24 @@
               {
                 "id": 15,
                 "name": "acl",
-                "type": "alluxio.proto.shared.AccessControlList"
+                "type": "alluxio.proto.shared.AccessControlList",
+                "options": [
+                  {
+                    "name": "deprecated",
+                    "value": "true"
+                  }
+                ]
               },
               {
                 "id": 16,
                 "name": "defaultAcl",
-                "type": "alluxio.proto.shared.AccessControlList"
+                "type": "alluxio.proto.shared.AccessControlList",
+                "options": [
+                  {
+                    "name": "deprecated",
+                    "value": "true"
+                  }
+                ]
               },
               {
                 "id": 17,
@@ -9905,6 +9975,21 @@
                 "id": 20,
                 "name": "last_access_time_ms",
                 "type": "int64"
+              },
+              {
+                "id": 21,
+                "name": "persistence_state_enum",
+                "type": "grpc.PersistenceState"
+              },
+              {
+                "id": 22,
+                "name": "newAcl",
+                "type": "alluxio.proto.shared.NewAccessControlList"
+              },
+              {
+                "id": 23,
+                "name": "newDefaultAcl",
+                "type": "alluxio.proto.shared.NewAccessControlList"
               }
             ],
             "maps": [
@@ -10036,7 +10121,13 @@
               {
                 "id": 19,
                 "name": "acl",
-                "type": "alluxio.proto.shared.AccessControlList"
+                "type": "alluxio.proto.shared.AccessControlList",
+                "options": [
+                  {
+                    "name": "deprecated",
+                    "value": "true"
+                  }
+                ]
               },
               {
                 "id": 20,
@@ -10083,6 +10174,16 @@
                 "id": 29,
                 "name": "last_access_time_ms",
                 "type": "int64"
+              },
+              {
+                "id": 30,
+                "name": "persistence_state_enum",
+                "type": "grpc.PersistenceState"
+              },
+              {
+                "id": 31,
+                "name": "newAcl",
+                "type": "alluxio.proto.shared.NewAccessControlList"
               }
             ],
             "maps": [
@@ -11159,7 +11260,13 @@
               {
                 "id": 8,
                 "name": "persistence_state",
-                "type": "string"
+                "type": "string",
+                "options": [
+                  {
+                    "name": "deprecated",
+                    "value": "true"
+                  }
+                ]
               },
               {
                 "id": 9,
@@ -11169,7 +11276,13 @@
               {
                 "id": 10,
                 "name": "access_acl",
-                "type": "alluxio.proto.shared.AccessControlList"
+                "type": "alluxio.proto.shared.AccessControlList",
+                "options": [
+                  {
+                    "name": "deprecated",
+                    "value": "true"
+                  }
+                ]
               },
               {
                 "id": 11,
@@ -11205,7 +11318,13 @@
               {
                 "id": 14,
                 "name": "default_acl",
-                "type": "alluxio.proto.shared.AccessControlList"
+                "type": "alluxio.proto.shared.AccessControlList",
+                "options": [
+                  {
+                    "name": "deprecated",
+                    "value": "true"
+                  }
+                ]
               },
               {
                 "id": 15,
@@ -11262,6 +11381,21 @@
                 "id": 24,
                 "name": "persist_job_temp_ufs_path",
                 "type": "string"
+              },
+              {
+                "id": 31,
+                "name": "persistence_state_enum",
+                "type": "grpc.PersistenceState"
+              },
+              {
+                "id": 32,
+                "name": "new_access_acl",
+                "type": "alluxio.proto.shared.NewAccessControlList"
+              },
+              {
+                "id": 33,
+                "name": "new_default_acl",
+                "type": "alluxio.proto.shared.NewAccessControlList"
               }
             ],
             "maps": [
@@ -11367,12 +11501,23 @@
                 "id": 3,
                 "name": "actions",
                 "type": "AclAction",
-                "is_repeated": true
+                "is_repeated": true,
+                "options": [
+                  {
+                    "name": "deprecated",
+                    "value": "true"
+                  }
+                ]
               },
               {
                 "id": 4,
                 "name": "isDefault",
                 "type": "bool"
+              },
+              {
+                "id": 5,
+                "name": "modeBits",
+                "type": "grpc.Bits"
               }
             ]
           },
@@ -11437,6 +11582,73 @@
                 "type": "bool"
               }
             ]
+          },
+          {
+            "name": "NewAccessControlList",
+            "fields": [
+              {
+                "id": 1,
+                "name": "owningUser",
+                "type": "string"
+              },
+              {
+                "id": 2,
+                "name": "owningGroup",
+                "type": "string"
+              },
+              {
+                "id": 3,
+                "name": "mode",
+                "type": "uint32"
+              },
+              {
+                "id": 4,
+                "name": "namedActions",
+                "type": "ExtendedAclAction",
+                "is_repeated": true
+              },
+              {
+                "id": 5,
+                "name": "groupedActions",
+                "type": "ExtendedAclAction",
+                "is_repeated": true
+              },
+              {
+                "id": 6,
+                "name": "maskActions",
+                "type": "grpc.Bits"
+              },
+              {
+                "id": 8,
+                "name": "isDefault",
+                "type": "bool"
+              },
+              {
+                "id": 9,
+                "name": "isEmpty",
+                "type": "bool"
+              }
+            ]
+          },
+          {
+            "name": "ExtendedAclAction",
+            "fields": [
+              {
+                "id": 1,
+                "name": "name",
+                "type": "string"
+              },
+              {
+                "id": 2,
+                "name": "modeBits",
+                "type": "grpc.Bits"
+              }
+            ]
+          }
+        ],
+        "imports": [
+          {
+            "path": "grpc/common.proto"
           }
         ],
         "package": {
