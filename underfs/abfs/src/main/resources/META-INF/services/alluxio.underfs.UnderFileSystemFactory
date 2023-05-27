@@ -10,3 +10,4 @@
 #
 
 alluxio.underfs.abfs.AbfsUnderFileSystemFactory
+alluxio.underfs.abfsobject.AbfsObjectUnderFileSystemFactory

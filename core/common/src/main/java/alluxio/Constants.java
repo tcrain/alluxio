@@ -60,6 +60,7 @@ public final class Constants {
   // Under Filesystem URI Schemes
   public static final String HEADER_ABFS = "abfs://";
   public static final String HEADER_ABFSS = "abfss://";
+  public static final String HEADER_ABFSO = "abfso://";
   public static final String HEADER_ADL = "adl://";
   public static final String HEADER_ADLS = "adls://";
   public static final String HEADER_CEPHFS = "cephfs://";

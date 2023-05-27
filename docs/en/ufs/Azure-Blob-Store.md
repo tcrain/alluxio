@@ -103,3 +103,7 @@ If you mount the Blob and configure the Blob path start with `wasb://`, you may 
 alluxio.exception.AlluxioException: com.microsoft.azure.storage.StorageException: The account being accessed does not support http.
 ```
 You can change the Blob path start with `wasbs://`.
+
+## Using the  Azure Blob Storage client library (experimental)
+
+The previuosly described way of mounting Azure storage containers runs through the

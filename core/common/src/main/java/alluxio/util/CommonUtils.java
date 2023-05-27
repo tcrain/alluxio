@@ -427,6 +427,13 @@ public final class CommonUtils {
     return key;
   }
 
+  public static String addSuffixIfMissing(final String key, final String suffix) {
+    if (key.endsWith(suffix)) {
+      return key;
+    }
+    return key + suffix;
+  }
+
   /**
    * Strips the prefix from the key if it is present. For example, for input key
    * ufs://my-bucket-name/my-key/file and prefix ufs://my-bucket-name/, the output would be

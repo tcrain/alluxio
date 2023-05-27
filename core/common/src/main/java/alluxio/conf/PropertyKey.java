@@ -1705,6 +1705,13 @@ public final class PropertyKey implements Comparable<PropertyKey> {
       .setConsistencyCheckLevel(ConsistencyCheckLevel.ENFORCE)
       .setScope(Scope.SERVER)
       .build();
+  public static final PropertyKey ABS_CLIENT_HIERARCHICAL =
+      stringBuilder(Name.ABS_CLIENT_HIERARCHICAL)
+          .setDescription("If the ABFS endpoint supports hierarchical namespace. See"
+              + "https://learn.microsoft.com/en-us/azure/storage/blobs/data-lake-storage-namespace")
+          .setConsistencyCheckLevel(ConsistencyCheckLevel.ENFORCE)
+          .setScope(Scope.SERVER)
+          .build();
   public static final PropertyKey ABFS_CLIENT_ID = stringBuilder(Name.ABFS_CLIENT_ID)
       .setDescription("The client id for ABFS.")
       .setConsistencyCheckLevel(ConsistencyCheckLevel.ENFORCE)
@@ -7666,6 +7673,7 @@ public final class PropertyKey implements Comparable<PropertyKey> {
     // UFS access control related properties
     //
     public static final String ABFS_CLIENT_ENDPOINT = "fs.azure.account.oauth2.client.endpoint";
+    public static final String ABS_CLIENT_HIERARCHICAL = "abfs.client.hierarchical";
     public static final String ABFS_CLIENT_ID = "fs.azure.account.oauth2.client.id";
     public static final String ABFS_CLIENT_SECRET = "fs.azure.account.oauth2.client.secret";
     public static final String ABFS_MSI_ENDPOINT = "fs.azure.account.oauth2.msi.endpoint";
